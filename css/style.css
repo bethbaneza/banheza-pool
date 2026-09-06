@@ -24,6 +24,11 @@
   --color-section: #262a60;
   --color-section-glow: #353b80;
 
+  /* Acento secundário (laranja) — usado com moderação para destacar os cadastros
+     (clientes/produtos), sem competir com o acento roxo principal do resto do app. */
+  --color-warm: #e2984d;
+  --color-warm-100: #fbe9d3;
+
   /* Nocturne não tem papel de aviso — par derivado em OKLCH na mesma escala
      de luminosidade das rampas (L 0.750/0.920/0.350, matiz 62), usado só
      para leituras fora da faixa e avisos técnicos. */
@@ -162,6 +167,9 @@ input[type=number] { -moz-appearance: textfield; }
 .btn-secondary { border-color: var(--color-divider); }
 .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 .btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-warm { color: var(--color-warm); border-color: var(--color-warm); }
+.btn-warm:hover { background: color-mix(in srgb, var(--color-warm) 14%, transparent); }
+.btn-warm:active { background: color-mix(in srgb, var(--color-warm) 24%, transparent); }
 .btn-ghost { color: var(--color-accent); padding-inline: 3px; }
 .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .btn-icon { width: 44px; height: 44px; padding: 0; border-radius: 50%; }
@@ -414,7 +422,7 @@ select.input { appearance: none; }
 /* ── clientes ────────────────────────────────────────────────────────────── */
 .client-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
 .client-card { display: flex; flex-direction: column; gap: 11px; cursor: pointer; text-align: left; border: none; font-family: inherit; }
-.client-card-name { font-weight: 500; font-size: 17px; line-height: 1.25; }
+.client-card-name { font-weight: 500; font-size: 17px; line-height: 1.25; color: var(--color-warm); }
 .client-card-meta { font-size: 11.5px; color: rgba(233,233,237,.55); margin-top: 3px; line-height: 1.5; }
 .client-card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .client-card-count { font-size: 11px; color: rgba(233,233,237,.45); }
@@ -422,4 +430,5 @@ select.input { appearance: none; }
   display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
 }
 .client-detail-header .info { flex: 1; min-width: 180px; }
+.client-detail-header .info h2 { color: var(--color-warm); }
 .client-detail-header .contato { font-size: 12px; color: rgba(233,233,237,.55); margin-top: 3px; }

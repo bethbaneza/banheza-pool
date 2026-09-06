@@ -245,7 +245,7 @@ function syncToast() {
 /* ── navegação ───────────────────────────────────────────────────────────── */
 
 const NAV_ITEMS = [
-  ['clientes', 'Clientes', 'ph-users'],
+  ['clientes', 'Cadastros', 'ph-users'],
   ['medir', 'Medir', 'ph-drop'],
   ['sal', 'Sal', 'ph-cube'],
   ['historico', 'Histórico', 'ph-clock-counter-clockwise'],
@@ -318,8 +318,8 @@ function renderScreenClientes() {
     <div class="screen-header">
       <div><div class="kicker">${esc(hoje)}</div><h2>Clientes</h2></div>
       <div class="screen-header-actions">
-        <button type="button" class="btn btn-secondary" data-action="ir-produtos" style="gap:6px"><i class="ph ph-flask"></i>Produtos</button>
-        <button type="button" class="btn btn-primary" data-action="ir-cadastro-cliente" style="gap:6px"><i class="ph ph-plus"></i>Novo cliente</button>
+        <button type="button" class="btn btn-warm" data-action="ir-produtos" style="gap:6px"><i class="ph ph-flask"></i>Produtos</button>
+        <button type="button" class="btn btn-warm" data-action="ir-cadastro-cliente" style="gap:6px"><i class="ph ph-plus"></i>Novo cliente</button>
       </div>
     </div>
     <div class="client-grid">
