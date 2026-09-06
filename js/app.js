@@ -13,24 +13,29 @@ const TIPOS_POR_DIRECAO = {
   cloro: { subir: ['Clorante granulado', 'Clorante em pastilha', 'Clorante líquido'], descer: [] },
 };
 
+// Valores são chaves de tradução (js/i18n.js), não o texto final — ver nota em diagnostics.js.
 const SEM_PRODUTO_TEXTO = {
-  alcalinidade: 'Selecione, acima, um produto cadastrado para calcular a dose exata.',
-  ph: 'Selecione, acima, um produto cadastrado para calcular a dose exata.',
-  dureza: 'Não existe produto para baixar a dureza cálcica — corrigir por diluição: renovar parte da água da piscina.',
-  cianurico: 'Não existe produto para baixar o ácido cianúrico — a correção é por diluição: renovar parte da água da piscina, ou aguardar a degradação natural.',
-  sal: 'Não existe produto para baixar o sal — diluir com reposição de água doce (retrolavagem do filtro ou troca parcial).',
-  cloro: 'Não existe produto para baixar o cloro livre — aguardar a degradação natural (sol e circulação) ou diluir com reposição de água.',
+  alcalinidade: 'semProduto.alcalinidade',
+  ph: 'semProduto.ph',
+  dureza: 'semProduto.dureza',
+  cianurico: 'semProduto.cianurico',
+  sal: 'semProduto.sal',
+  cloro: 'semProduto.cloro',
 };
 
 /* ── formatação ──────────────────────────────────────────────────────────── */
+// Separador decimal e agrupamento seguem o idioma da interface (vírgula em PT/ES, ponto em
+// EN) — só a moeda continua sempre em Reais (moeda(), abaixo): é um app para o mercado
+// brasileiro, o preço real cadastrado pelo piscineiro é em R$ independente do idioma da tela.
 
-function nf(n, casas) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas }); }
-function numFmt(n) { return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 }); }
-function pctFmt(n) { return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%'; }
+function numLocale() { return idioma === 'pt' ? 'pt-BR' : idioma === 'es' ? 'es-ES' : 'en-US'; }
+function nf(n, casas) { return Number(n).toLocaleString(numLocale(), { minimumFractionDigits: casas, maximumFractionDigits: casas }); }
+function numFmt(n) { return Number(n).toLocaleString(numLocale(), { maximumFractionDigits: 2 }); }
+function pctFmt(n) { return Number(n).toLocaleString(numLocale(), { maximumFractionDigits: 1 }) + '%'; }
 function dose3Fmt(n) { return nf(n, 3); }
-function moeda(n) { return Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+function moeda(n) { return Number(n).toLocaleString(numLocale(), { style: 'currency', currency: 'BRL' }); }
 function dataHoraFmt(iso) {
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString(numLocale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 function formatHoras(h) {
   if (h < 1) return Math.round(h * 60) + ' min';
@@ -73,7 +78,7 @@ function svgProfUnica() {
     <line x1="168" y1="20" x2="168" y2="80" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="165" y1="20" x2="171" y2="20" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="165" y1="80" x2="171" y2="80" stroke="currentColor" stroke-width="1.2"></line>
-    <text x="176" y="53" font-size="9" text-anchor="middle" transform="rotate(-90 176 53)" style="fill:rgba(233,233,237,.7)">profundidade</text>
+    <text x="176" y="53" font-size="9" text-anchor="middle" transform="rotate(-90 176 53)" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('piscinaForm.profundidade').toLowerCase())}</text>
   </svg>`;
 }
 function svgProfMinMax() {
@@ -83,11 +88,11 @@ function svgProfMinMax() {
     <line x1="12" y1="20" x2="12" y2="50" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="9" y1="20" x2="15" y2="20" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="9" y1="50" x2="15" y2="50" stroke="currentColor" stroke-width="1.2"></line>
-    <text x="4" y="38" font-size="9" text-anchor="middle" transform="rotate(-90 4 38)" style="fill:rgba(233,233,237,.7)">mín</text>
+    <text x="4" y="38" font-size="9" text-anchor="middle" transform="rotate(-90 4 38)" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('piscinaForm.minAbrev'))}</text>
     <line x1="168" y1="20" x2="168" y2="80" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="165" y1="20" x2="171" y2="20" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="165" y1="80" x2="171" y2="80" stroke="currentColor" stroke-width="1.2"></line>
-    <text x="176" y="53" font-size="9" text-anchor="middle" transform="rotate(-90 176 53)" style="fill:rgba(233,233,237,.7)">máx</text>
+    <text x="176" y="53" font-size="9" text-anchor="middle" transform="rotate(-90 176 53)" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('piscinaForm.maxAbrev'))}</text>
   </svg>`;
 }
 function svgShapeRetangular() {
@@ -96,11 +101,11 @@ function svgShapeRetangular() {
     <line x1="40" y1="15" x2="140" y2="15" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="40" y1="12" x2="40" y2="18" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="140" y1="12" x2="140" y2="18" stroke="currentColor" stroke-width="1.2"></line>
-    <text x="90" y="10" font-size="10" text-anchor="middle" style="fill:rgba(233,233,237,.7)">comprimento</text>
+    <text x="90" y="10" font-size="10" text-anchor="middle" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('shape.comprimento').toLowerCase())}</text>
     <line x1="28" y1="25" x2="28" y2="85" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="25" y1="25" x2="31" y2="25" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="25" y1="85" x2="31" y2="85" stroke="currentColor" stroke-width="1.2"></line>
-    <text x="14" y="58" font-size="10" text-anchor="middle" transform="rotate(-90 14 58)" style="fill:rgba(233,233,237,.7)">largura</text>
+    <text x="14" y="58" font-size="10" text-anchor="middle" transform="rotate(-90 14 58)" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('shape.largura').toLowerCase())}</text>
   </svg>`;
 }
 function svgShapeCircular() {
@@ -110,7 +115,7 @@ function svgShapeCircular() {
     <line x1="47" y1="52" x2="47" y2="58" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="123" y1="52" x2="123" y2="58" stroke="currentColor" stroke-width="1.2"></line>
     <rect x="63" y="48" width="44" height="14" style="fill:var(--color-accent-900)"></rect>
-    <text x="85" y="58" font-size="10" text-anchor="middle" style="fill:rgba(233,233,237,.7)">diâmetro</text>
+    <text x="85" y="58" font-size="10" text-anchor="middle" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('shape.diametro').toLowerCase())}</text>
   </svg>`;
 }
 function svgShapeOval() {
@@ -120,12 +125,12 @@ function svgShapeOval() {
     <line x1="35" y1="52" x2="35" y2="58" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="135" y1="52" x2="135" y2="58" stroke="currentColor" stroke-width="1.2"></line>
     <rect x="60" y="48" width="50" height="13" style="fill:var(--color-accent-900)"></rect>
-    <text x="85" y="57" font-size="9" text-anchor="middle" style="fill:rgba(233,233,237,.7)">comprimento</text>
+    <text x="85" y="57" font-size="9" text-anchor="middle" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('shape.comprimento').toLowerCase())}</text>
     <line x1="85" y1="25" x2="85" y2="85" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="82" y1="25" x2="88" y2="25" stroke="currentColor" stroke-width="1.2"></line>
     <line x1="82" y1="85" x2="88" y2="85" stroke="currentColor" stroke-width="1.2"></line>
     <rect x="66" y="72" width="38" height="13" style="fill:var(--color-accent-900)"></rect>
-    <text x="85" y="81" font-size="9" text-anchor="middle" style="fill:rgba(233,233,237,.7)">largura</text>
+    <text x="85" y="81" font-size="9" text-anchor="middle" style="fill:rgba(var(--color-text-rgb),.7)">${esc(t('shape.largura').toLowerCase())}</text>
   </svg>`;
 }
 
@@ -151,6 +156,27 @@ function estadoInicial() {
   };
 }
 let state = estadoInicial();
+
+/* ── tema (claro/escuro) ─────────────────────────────────────────────────── */
+// Assim como o idioma (js/i18n.js), o tema é preferência do dispositivo, não do `state` —
+// não deve ser apagado quando a pessoa desloga (aoDeslogar() recria o `state` do zero).
+
+function temaInicial() {
+  const atual = document.documentElement.getAttribute('data-theme');
+  if (atual === 'light' || atual === 'dark') return atual;
+  try {
+    const salvo = localStorage.getItem('bp_tema');
+    if (salvo === 'light' || salvo === 'dark') return salvo;
+  } catch (e) { /* localStorage indisponível — segue com o padrão */ }
+  return 'dark';
+}
+let tema = temaInicial();
+
+function definirTema(novo) {
+  tema = novo;
+  document.documentElement.setAttribute('data-theme', novo);
+  try { localStorage.setItem('bp_tema', novo); } catch (e) { /* ignora */ }
+}
 
 function formClienteVazio(cliente) {
   if (!cliente) return { id: null, nome: '', telefone: '', email: '', endereco: '', observacoes: '' };
@@ -211,18 +237,18 @@ function ultimoDiagnosticoDe(poolId) {
 }
 
 function historyStepView(p) {
-  const titulo = p.nome + ': ' + (p.status === 'adequado' ? 'adequado' : p.rotuloStatus);
+  const titulo = t(p.nome) + ': ' + (p.status === 'adequado' ? t('historico.adequado') : t(p.rotuloStatus));
   let detalhe;
   if (p.status === 'adequado') {
-    detalhe = 'Leitura ' + numFmt(p.valor) + (p.unidade ? ' ' + p.unidade : '');
+    detalhe = t('historico.leitura', { valor: numFmt(p.valor), unidade: p.unidade ? ' ' + p.unidade : '' });
   } else if (p.instrucaoOperacional) {
-    detalhe = p.instrucaoOperacional;
+    detalhe = t(p.instrucaoOperacional);
   } else if (p.instrucaoGeradorSalino) {
-    detalhe = p.instrucaoGeradorSalino;
+    detalhe = t(p.instrucaoGeradorSalino);
   } else if (p.dose) {
-    detalhe = dose3Fmt(p.dose.valor) + ' ' + p.dose.unidade + ' de ' + p.produto;
+    detalhe = t('pdf.doseTexto', { valor: dose3Fmt(p.dose.valor), unidade: p.dose.unidade, produto: p.produto });
   } else {
-    detalhe = SEM_PRODUTO_TEXTO[p.parametroId] || 'sem produto selecionado';
+    detalhe = t(SEM_PRODUTO_TEXTO[p.parametroId] || 'historico.semProdutoSelecionado');
   }
   return { titulo, detalhe, marca: p.status === 'adequado' ? 'var(--color-accent-700)' : 'var(--warn-400)' };
 }
@@ -245,12 +271,20 @@ function syncToast() {
 /* ── navegação ───────────────────────────────────────────────────────────── */
 
 const NAV_ITEMS = [
-  ['clientes', 'Cadastros', 'ph-users'],
-  ['medir', 'Medir', 'ph-drop'],
-  ['sal', 'Sal', 'ph-cube'],
-  ['historico', 'Histórico', 'ph-clock-counter-clockwise'],
-  ['custos', 'Custos', 'ph-chart-bar'],
+  ['clientes', 'nav.cadastros', 'ph-users'],
+  ['medir', 'nav.medir', 'ph-drop'],
+  ['sal', 'nav.sal', 'ph-cube'],
+  ['historico', 'nav.historico', 'ph-clock-counter-clockwise'],
+  ['custos', 'nav.custos', 'ph-chart-bar'],
 ];
+
+function renderPrefsButtons() {
+  return `
+    <button type="button" class="btn btn-secondary btn-icon" data-action="alternar-tema" title="${esc(t(tema === 'dark' ? 'nav.tema.paraClaro' : 'nav.tema.paraEscuro'))}" style="width:36px;height:36px">
+      <i class="ph ${tema === 'dark' ? 'ph-sun' : 'ph-moon'}"></i>
+    </button>
+    <button type="button" class="btn btn-secondary" data-action="ciclar-idioma" title="${esc(t('nav.idioma.trocar'))}" style="min-height:36px;padding-inline:9px;font-size:11.5px;font-weight:600">${idioma.toUpperCase()}</button>`;
+}
 
 function renderNav() {
   const ativoId = !state.screen ? state.tab : null;
@@ -258,13 +292,22 @@ function renderNav() {
     <div class="nav-top-inner">
       <div class="brand"><i class="ph ph-drop brand-icon"></i><span class="brand-label">Banheza Pool</span></div>
       ${NAV_ITEMS.map(([id, label, icon]) => `
-        <button type="button" class="nav-top-link${ativoId === id ? ' ativo' : ''}" data-action="nav-go" data-tab="${id}"><i class="ph ${icon}"></i>${esc(label)}</button>
+        <button type="button" class="nav-top-link${ativoId === id ? ' ativo' : ''}" data-action="nav-go" data-tab="${id}"><i class="ph ${icon}"></i>${esc(t(label))}</button>
       `).join('')}
-      <button type="button" class="account-btn" data-action="sair"><i class="ph ph-sign-out"></i>Sair</button>
+      <div style="display:flex;gap:6px;margin-left:4px">${renderPrefsButtons()}</div>
+      <button type="button" class="account-btn" data-action="sair"><i class="ph ph-sign-out"></i>${esc(t('nav.sair'))}</button>
     </div>`;
   document.getElementById('nav-bottom').innerHTML = NAV_ITEMS.map(([id, label, icon]) => `
-    <button type="button" class="nav-bottom-link${ativoId === id ? ' ativo' : ''}" data-action="nav-go" data-tab="${id}"><i class="ph ${icon}"></i><span>${esc(label)}</span></button>
+    <button type="button" class="nav-bottom-link${ativoId === id ? ' ativo' : ''}" data-action="nav-go" data-tab="${id}"><i class="ph ${icon}"></i><span>${esc(t(label))}</span></button>
   `).join('');
+  const mobileHeader = document.getElementById('mobile-header');
+  if (mobileHeader) {
+    mobileHeader.innerHTML = `
+      <i class="ph ph-drop brand-icon"></i>
+      <span class="brand-label" style="flex:1">Banheza Pool</span>
+      ${renderPrefsButtons()}
+      <button type="button" class="account-btn" data-action="sair" style="margin-left:6px"><i class="ph ph-sign-out"></i>${esc(t('nav.sair'))}</button>`;
+  }
 }
 
 /* ── tela: autenticação ──────────────────────────────────────────────────── */
@@ -273,21 +316,22 @@ function renderAuthScreen() {
   const modo = state.authMode;
   return `
     <section class="auth-screen">
+      <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px">${renderPrefsButtons()}</div>
       <div class="auth-card">
         <div class="auth-brand"><i class="ph ph-drop brand-icon"></i><span class="brand-label">Banheza Pool</span></div>
         <div class="auth-tabs">
-          <button type="button" class="auth-tab${modo === 'entrar' ? ' ativa' : ''}" data-action="auth-set-modo" data-modo="entrar">Entrar</button>
-          <button type="button" class="auth-tab${modo === 'criar' ? ' ativa' : ''}" data-action="auth-set-modo" data-modo="criar">Criar conta</button>
+          <button type="button" class="auth-tab${modo === 'entrar' ? ' ativa' : ''}" data-action="auth-set-modo" data-modo="entrar">${esc(t('auth.entrar'))}</button>
+          <button type="button" class="auth-tab${modo === 'criar' ? ' ativa' : ''}" data-action="auth-set-modo" data-modo="criar">${esc(t('auth.criarConta'))}</button>
         </div>
         <div class="auth-form">
-          <div class="field"><label>E-mail</label><input class="input" type="text" data-action="auth-set-email" value="${esc(state.authEmail)}" placeholder="voce@exemplo.com" /></div>
-          <div class="field"><label>Senha</label><input class="input" type="password" data-action="auth-set-senha" value="${esc(state.authSenha)}" placeholder="${modo === 'criar' ? 'mínimo 6 caracteres' : ''}" /></div>
+          <div class="field"><label>${esc(t('auth.email'))}</label><input class="input" type="text" data-action="auth-set-email" value="${esc(state.authEmail)}" placeholder="${esc(t('auth.emailPlaceholder'))}" /></div>
+          <div class="field"><label>${esc(t('auth.senha'))}</label><input class="input" type="password" data-action="auth-set-senha" value="${esc(state.authSenha)}" placeholder="${modo === 'criar' ? esc(t('auth.senhaPlaceholderCriar')) : ''}" /></div>
           ${state.authErro ? `<p class="auth-error">${esc(state.authErro)}</p>` : ''}
           <button type="button" class="btn btn-primary btn-block" data-action="auth-submeter" style="min-height:46px" ${state.ocupado ? 'disabled' : ''}>
-            ${state.ocupado ? 'Aguarde…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+            ${state.ocupado ? esc(t('common.aguarde')) : modo === 'entrar' ? esc(t('auth.entrar')) : esc(t('auth.criarConta'))}
           </button>
         </div>
-        <p class="auth-note">${modo === 'entrar' ? 'Ainda não tem conta? Toque em "Criar conta" acima.' : 'Seus clientes, piscinas e histórico ficam só na sua conta — ninguém mais vê.'}</p>
+        <p class="auth-note">${modo === 'entrar' ? esc(t('auth.notaEntrar')) : esc(t('auth.notaCriar'))}</p>
       </div>
     </section>`;
 }
@@ -296,7 +340,7 @@ function renderAuthScreen() {
 
 function renderClientCard(c) {
   const piscinas = piscinasDoCliente(c.id);
-  const contato = [c.telefone, c.email].filter(Boolean).join(' · ') || 'sem contato cadastrado';
+  const contato = [c.telefone, c.email].filter(Boolean).join(' · ') || t('clientes.semContato');
   return `
     <button type="button" class="card client-card" data-action="abrir-cliente" data-id="${c.id}">
       <div>
@@ -305,27 +349,28 @@ function renderClientCard(c) {
         ${c.endereco ? `<div class="client-card-meta">${esc(c.endereco)}</div>` : ''}
       </div>
       <div class="client-card-bottom">
-        <span class="client-card-count">${piscinas.length} piscina${piscinas.length === 1 ? '' : 's'}</span>
-        <span class="btn btn-ghost" style="pointer-events:none">Abrir</span>
+        <span class="client-card-count">${piscinas.length} ${esc(t(piscinas.length === 1 ? 'clientes.piscinaSingular' : 'clientes.piscinaPlural'))}</span>
+        <span class="btn btn-ghost" style="pointer-events:none">${esc(t('clientes.abrir'))}</span>
       </div>
     </button>`;
 }
 
 function renderScreenClientes() {
-  const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
-  const clientes = state.clientes.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const locale = numLocale();
+  const hoje = new Date().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'short' });
+  const clientes = state.clientes.slice().sort((a, b) => a.nome.localeCompare(b.nome, locale));
   return `
     <div class="screen-header">
-      <div><div class="kicker">${esc(hoje)}</div><h2>Clientes</h2></div>
+      <div><div class="kicker">${esc(hoje)}</div><h2>${esc(t('clientes.titulo'))}</h2></div>
       <div class="screen-header-actions">
-        <button type="button" class="btn btn-warm" data-action="ir-produtos" style="gap:6px"><i class="ph ph-flask"></i>Produtos</button>
-        <button type="button" class="btn btn-warm" data-action="ir-cadastro-cliente" style="gap:6px"><i class="ph ph-plus"></i>Novo cliente</button>
+        <button type="button" class="btn btn-warm" data-action="ir-produtos" style="gap:6px"><i class="ph ph-flask"></i>${esc(t('clientes.produtos'))}</button>
+        <button type="button" class="btn btn-warm" data-action="ir-cadastro-cliente" style="gap:6px"><i class="ph ph-plus"></i>${esc(t('clientes.novoCliente'))}</button>
       </div>
     </div>
     <div class="client-grid">
       ${clientes.map(renderClientCard).join('')}
       <button type="button" class="add-pool-card" data-action="ir-cadastro-cliente">
-        <span class="txt">Cadastrar um novo cliente</span>
+        <span class="txt">${esc(t('clientes.cadastrarNovo'))}</span>
         <i class="ph ph-plus"></i>
       </button>
     </div>`;
@@ -336,18 +381,18 @@ function renderScreenCadastroCliente() {
   return `
     <div class="back-row">
       <button type="button" class="btn btn-secondary btn-icon" data-action="voltar-clientes"><i class="ph ph-arrow-left"></i></button>
-      <h4>${f.id ? 'Editar cliente' : 'Novo cliente'}</h4>
+      <h4>${f.id ? esc(t('clienteForm.editar')) : esc(t('clienteForm.novo'))}</h4>
     </div>
     <div class="card" style="display:flex;flex-direction:column;gap:14px;max-width:520px">
-      <div class="field"><label>Nome</label><input class="input" type="text" placeholder="Ex: Maria Souza" data-action="set-cliente-nome" value="${esc(f.nome)}" /></div>
-      <div class="field"><label>Telefone</label><input class="input" type="text" placeholder="Ex: (11) 91234-5678" data-action="set-cliente-telefone" value="${esc(f.telefone)}" /></div>
-      <div class="field"><label>E-mail</label><input class="input" type="text" placeholder="Ex: maria@exemplo.com" data-action="set-cliente-email" value="${esc(f.email)}" /></div>
-      <div class="field"><label>Endereço</label><input class="input" type="text" placeholder="Ex: Rua das Flores, 123" data-action="set-cliente-endereco" value="${esc(f.endereco)}" /></div>
-      <div class="field"><label>Observações</label><textarea class="input" data-action="set-cliente-observacoes" placeholder="Detalhes úteis sobre o cliente ou o acesso à piscina">${esc(f.observacoes)}</textarea></div>
+      <div class="field"><label>${esc(t('clienteForm.nome'))}</label><input class="input" type="text" placeholder="${esc(t('clienteForm.nomePlaceholder'))}" data-action="set-cliente-nome" value="${esc(f.nome)}" /></div>
+      <div class="field"><label>${esc(t('clienteForm.telefone'))}</label><input class="input" type="text" placeholder="${esc(t('clienteForm.telefonePlaceholder'))}" data-action="set-cliente-telefone" value="${esc(f.telefone)}" /></div>
+      <div class="field"><label>${esc(t('clienteForm.email'))}</label><input class="input" type="text" placeholder="${esc(t('clienteForm.emailPlaceholder'))}" data-action="set-cliente-email" value="${esc(f.email)}" /></div>
+      <div class="field"><label>${esc(t('clienteForm.endereco'))}</label><input class="input" type="text" placeholder="${esc(t('clienteForm.enderecoPlaceholder'))}" data-action="set-cliente-endereco" value="${esc(f.endereco)}" /></div>
+      <div class="field"><label>${esc(t('clienteForm.observacoes'))}</label><textarea class="input" data-action="set-cliente-observacoes" placeholder="${esc(t('clienteForm.observacoesPlaceholder'))}">${esc(f.observacoes)}</textarea></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
-        ${f.id ? `<button type="button" class="btn btn-ghost" data-action="excluir-cliente" data-id="${f.id}">Excluir cliente</button>` : ''}
-        <button type="button" class="btn btn-secondary" data-action="voltar-clientes">Cancelar</button>
-        <button type="button" class="btn btn-primary" data-action="salvar-cliente" style="padding-inline:20px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Salvando…' : 'Salvar cliente'}</button>
+        ${f.id ? `<button type="button" class="btn btn-ghost" data-action="excluir-cliente" data-id="${f.id}">${esc(t('clienteForm.excluir'))}</button>` : ''}
+        <button type="button" class="btn btn-secondary" data-action="voltar-clientes">${esc(t('common.cancelar'))}</button>
+        <button type="button" class="btn btn-primary" data-action="salvar-cliente" style="padding-inline:20px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('common.salvando')) : esc(t('clienteForm.salvar'))}</button>
       </div>
     </div>`;
 }
@@ -365,13 +410,13 @@ function renderScreenClienteDetalhe() {
         ${contato ? `<div class="contato">${esc(contato)}</div>` : ''}
         ${cliente.observacoes ? `<div class="contato">${esc(cliente.observacoes)}</div>` : ''}
       </div>
-      <button type="button" class="btn btn-secondary" data-action="ir-editar-cliente" data-id="${cliente.id}">Editar cliente</button>
-      <button type="button" class="btn btn-primary btn-icon" data-action="ir-cadastro-piscina" title="Nova piscina"><i class="ph ph-plus"></i></button>
+      <button type="button" class="btn btn-secondary" data-action="ir-editar-cliente" data-id="${cliente.id}">${esc(t('clienteDetalhe.editar'))}</button>
+      <button type="button" class="btn btn-primary btn-icon" data-action="ir-cadastro-piscina" title="${esc(t('clienteDetalhe.novaPiscinaTitulo'))}"><i class="ph ph-plus"></i></button>
     </div>
     <div class="pool-grid">
       ${piscinas.map(renderPoolCard).join('')}
       <button type="button" class="add-pool-card" data-action="ir-cadastro-piscina">
-        <span class="txt">Cadastrar piscina e calcular a litragem</span>
+        <span class="txt">${esc(t('clienteDetalhe.cadastrarPiscina'))}</span>
         <i class="ph ph-plus"></i>
       </button>
     </div>`;
@@ -387,30 +432,30 @@ function renderPoolCard(p) {
     const par = PARAMETROS.find((x) => x.id === k);
     const leitura = ult ? ult.leituras[k] : null;
     const dentro = leitura != null && classificar(Number(leitura), par.faixa.min, par.faixa.max) === 'adequado';
-    const cor = leitura == null ? 'rgba(233,233,237,.35)' : dentro ? 'var(--color-text)' : 'var(--warn-400)';
-    return `<div class="pool-chip"><div class="pool-chip-label">${esc(par.nome.split(' ')[0])}</div><div class="pool-chip-value" style="color:${cor}">${leitura == null ? '—' : numFmt(leitura)}</div></div>`;
+    const cor = leitura == null ? 'rgba(var(--color-text-rgb),.35)' : dentro ? 'var(--color-text)' : 'var(--warn-400)';
+    return `<div class="pool-chip"><div class="pool-chip-label">${esc(t('param.' + par.id + '.nomeCurto'))}</div><div class="pool-chip-value" style="color:${cor}">${leitura == null ? '—' : numFmt(leitura)}</div></div>`;
   }).join('');
   const desc = [
-    p.formato === 'irregular' ? 'irregular' : esc(p.formato),
-    p.sistemaDesinfeccao === 'salino' ? 'gerador salino' : p.sistemaDesinfeccao === 'ozonio' ? 'gerador de ozônio' : 'cloração manual',
+    p.formato === 'irregular' ? t('poolCard.irregular') : t('formato.' + p.formato),
+    p.sistemaDesinfeccao === 'salino' ? t('sistema.salino.curto') : p.sistemaDesinfeccao === 'ozonio' ? t('sistema.ozonio.curto') : t('sistema.manual.curto'),
   ];
-  const tagLabel = !ult ? 'Sem medição' : fora > 0 ? 'Ação' : 'Estável';
+  const tagLabel = !ult ? t('poolCard.semMedicao') : fora > 0 ? t('poolCard.acao') : t('poolCard.estavel');
   const tagStyle = !ult ? 'background:var(--color-neutral-800);color:var(--color-neutral-100)'
     : fora > 0 ? 'border:1px solid var(--warn-400);color:var(--warn-400)'
     : 'background:var(--color-accent-800);color:var(--color-accent-100)';
-  const meta = !ult ? 'nenhuma leitura registrada' : dataHoraFmt(ult.data) + (fora > 0 ? ' · ' + fora + ' correção(ões)' : '');
+  const meta = !ult ? t('poolCard.nenhumaLeitura') : dataHoraFmt(ult.data) + (fora > 0 ? ' · ' + fora + ' ' + t('poolCard.correcoes') : '');
   return `
     <div class="card pool-card">
       <div class="pool-card-top">
-        <div><div class="pool-card-name">${esc(p.nome)}</div><div class="pool-card-sub">${nf(p.litros, 0)} L · ${desc.join(' · ')}</div></div>
+        <div><div class="pool-card-name">${esc(p.nome)}</div><div class="pool-card-sub">${nf(p.litros, 0)} L · ${esc(desc.join(' · '))}</div></div>
         <span class="tag" style="${tagStyle}">${esc(tagLabel)}</span>
       </div>
       <div class="pool-chip-row">${chips}</div>
       <div class="pool-card-bottom">
         <span class="pool-card-meta">${esc(meta)}</span>
         <div class="pool-card-actions">
-          <button type="button" class="btn btn-ghost" data-action="editar-piscina" data-id="${p.id}" style="font-size:12.5px">Editar</button>
-          <button type="button" class="btn btn-primary" data-action="medir-piscina" data-id="${p.id}" style="min-height:38px">Medir</button>
+          <button type="button" class="btn btn-ghost" data-action="editar-piscina" data-id="${p.id}" style="font-size:12.5px">${esc(t('poolCard.editar'))}</button>
+          <button type="button" class="btn btn-primary" data-action="medir-piscina" data-id="${p.id}" style="min-height:38px">${esc(t('poolCard.medir'))}</button>
         </div>
       </div>
     </div>`;
@@ -420,28 +465,28 @@ function renderShapeBlock(fo, i, f) {
   const diag = fo.tipo === 'circular' ? svgShapeCircular() : fo.tipo === 'oval' ? svgShapeOval() : svgShapeRetangular();
   const removivel = f.formato === 'composta' && f.formas.length > 1;
   const campos = fo.tipo === 'circular'
-    ? `<div class="field"><label>Diâmetro</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="diametro" value="${esc(fo.diametro)}" /></div>`
-    : `<div class="field"><label>Comprimento</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="comprimento" value="${esc(fo.comprimento)}" /></div>
-       <div class="field"><label>Largura</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="largura" value="${esc(fo.largura)}" /></div>`;
+    ? `<div class="field"><label>${esc(t('shape.diametro'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="diametro" value="${esc(fo.diametro)}" /></div>`
+    : `<div class="field"><label>${esc(t('shape.comprimento'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="comprimento" value="${esc(fo.comprimento)}" /></div>
+       <div class="field"><label>${esc(t('shape.largura'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="largura" value="${esc(fo.largura)}" /></div>`;
   return `
     <div class="shape-block">
       <div class="shape-diagrama">${diag}</div>
       ${campos}
-      ${removivel ? `<button type="button" class="btn btn-ghost" data-action="remover-forma" data-idx="${i}" style="min-height:40px">Remover</button>` : ''}
+      ${removivel ? `<button type="button" class="btn btn-ghost" data-action="remover-forma" data-idx="${i}" style="min-height:40px">${esc(t('shape.remover'))}</button>` : ''}
     </div>`;
 }
 
 const SISTEMAS = [
-  ['manual', 'Cloração manual'],
-  ['salino', 'Gerador salino (eletrólise)'],
-  ['ozonio', 'Gerador de ozônio (complementar ao cloro)'],
+  ['manual', 'sistema.manual'],
+  ['salino', 'sistema.salino'],
+  ['ozonio', 'sistema.ozonio'],
 ];
 const FORMATOS = [
-  ['retangular', 'Retangular'],
-  ['circular', 'Circular'],
-  ['oval', 'Oval'],
-  ['composta', 'Composta (soma de formas)'],
-  ['irregular', 'Irregular — litragem informada à mão'],
+  ['retangular', 'formato.retangular'],
+  ['circular', 'formato.circular'],
+  ['oval', 'formato.oval'],
+  ['composta', 'formato.composta'],
+  ['irregular', 'formato.irregular'],
 ];
 
 function renderScreenCadastroPiscina() {
@@ -449,70 +494,70 @@ function renderScreenCadastroPiscina() {
   if (!cliente) { state.screen = null; return renderScreenClientes(); }
   const f = state.formPiscina || (state.formPiscina = formVazio(null));
   const calc = litragemPreview(f);
-  const litragemTexto = calc.ok ? nf(calc.litros, 0) + ' L  ·  ' + nf(calc.litros / 1000, 2) + ' m³' : 'informe as medidas';
+  const litragemTexto = calc.ok ? nf(calc.litros, 0) + ' L  ·  ' + nf(calc.litros / 1000, 2) + ' m³' : t('piscinaForm.informeMedidas');
   return `
     <div class="back-row">
       <button type="button" class="btn btn-secondary btn-icon" data-action="voltar-cliente-detalhe"><i class="ph ph-arrow-left"></i></button>
-      <h4>${f.id ? 'Editar piscina' : 'Nova piscina'} — ${esc(cliente.nome)}</h4>
+      <h4>${f.id ? esc(t('piscinaForm.editar')) : esc(t('piscinaForm.nova'))} — ${esc(cliente.nome)}</h4>
     </div>
     <div class="cadastro-grid">
       <div class="card">
-        <div class="field"><label>Nome da piscina</label><input class="input" type="text" placeholder="Ex: Piscina principal" data-action="set-nome" value="${esc(f.nome)}" /></div>
-        <div class="field"><label>Sistema de desinfecção</label>
+        <div class="field"><label>${esc(t('piscinaForm.nome'))}</label><input class="input" type="text" placeholder="${esc(t('piscinaForm.nomePlaceholder'))}" data-action="set-nome" value="${esc(f.nome)}" /></div>
+        <div class="field"><label>${esc(t('piscinaForm.sistemaDesinfeccao'))}</label>
           <div style="display:flex;flex-direction:column;gap:7px">
-            ${SISTEMAS.map(([id, label]) => `<label class="radio"><input type="radio" name="sistema" data-action="set-sistema" data-tipo="${id}" ${f.sistema === id ? 'checked' : ''} /><span class="dot"></span>${esc(label)}</label>`).join('')}
+            ${SISTEMAS.map(([id, label]) => `<label class="radio"><input type="radio" name="sistema" data-action="set-sistema" data-tipo="${id}" ${f.sistema === id ? 'checked' : ''} /><span class="dot"></span>${esc(t(label))}</label>`).join('')}
           </div>
         </div>
         ${f.sistema === 'salino' ? `
         <div style="display:flex;gap:10px">
-          <div class="field" style="flex:1"><label>Sal mín. do gerador (ppm)</label><input class="input" type="text" inputmode="decimal" placeholder="2700" data-action="set-sal-min" value="${esc(f.salMin)}" /></div>
-          <div class="field" style="flex:1"><label>Sal máx. do gerador (ppm)</label><input class="input" type="text" inputmode="decimal" placeholder="3400" data-action="set-sal-max" value="${esc(f.salMax)}" /></div>
+          <div class="field" style="flex:1"><label>${esc(t('piscinaForm.salMin'))}</label><input class="input" type="text" inputmode="decimal" placeholder="2700" data-action="set-sal-min" value="${esc(f.salMin)}" /></div>
+          <div class="field" style="flex:1"><label>${esc(t('piscinaForm.salMax'))}</label><input class="input" type="text" inputmode="decimal" placeholder="3400" data-action="set-sal-max" value="${esc(f.salMax)}" /></div>
         </div>` : ''}
-        <div class="field"><label>Unidade de medida</label>
+        <div class="field"><label>${esc(t('piscinaForm.unidadeMedida'))}</label>
           <span class="seg">
-            <label class="seg-opt"><input type="radio" name="un" data-action="set-unidade" data-tipo="m" ${f.unidade === 'm' ? 'checked' : ''} />Metros</label>
-            <label class="seg-opt"><input type="radio" name="un" data-action="set-unidade" data-tipo="cm" ${f.unidade === 'cm' ? 'checked' : ''} />Centímetros</label>
+            <label class="seg-opt"><input type="radio" name="un" data-action="set-unidade" data-tipo="m" ${f.unidade === 'm' ? 'checked' : ''} />${esc(t('piscinaForm.metros'))}</label>
+            <label class="seg-opt"><input type="radio" name="un" data-action="set-unidade" data-tipo="cm" ${f.unidade === 'cm' ? 'checked' : ''} />${esc(t('piscinaForm.centimetros'))}</label>
           </span>
         </div>
       </div>
       <div class="card">
         <div>
-          <div class="diagrama-label">Profundidade</div>
+          <div class="diagrama-label">${esc(t('piscinaForm.profundidade'))}</div>
           ${f.modoProf === 'unica' ? svgProfUnica() : svgProfMinMax()}
           <div style="display:flex;flex-direction:column;gap:7px">
-            <label class="radio"><input type="radio" name="prof" data-action="set-modo-prof" data-tipo="unica" ${f.modoProf === 'unica' ? 'checked' : ''} /><span class="dot"></span>Profundidade única</label>
-            <label class="radio"><input type="radio" name="prof" data-action="set-modo-prof" data-tipo="minmax" ${f.modoProf === 'minmax' ? 'checked' : ''} /><span class="dot"></span>Mínima e máxima (fundo inclinado)</label>
+            <label class="radio"><input type="radio" name="prof" data-action="set-modo-prof" data-tipo="unica" ${f.modoProf === 'unica' ? 'checked' : ''} /><span class="dot"></span>${esc(t('piscinaForm.profUnica'))}</label>
+            <label class="radio"><input type="radio" name="prof" data-action="set-modo-prof" data-tipo="minmax" ${f.modoProf === 'minmax' ? 'checked' : ''} /><span class="dot"></span>${esc(t('piscinaForm.profMinMax'))}</label>
           </div>
           ${f.modoProf === 'unica'
-            ? `<input class="input" type="text" inputmode="decimal" placeholder="Profundidade" data-action="set-prof" value="${esc(f.prof)}" style="margin-top:9px" />`
-            : `<div style="display:flex;gap:9px;margin-top:9px"><input class="input" type="text" inputmode="decimal" placeholder="Mínima" data-action="set-prof-min" value="${esc(f.profMin)}" /><input class="input" type="text" inputmode="decimal" placeholder="Máxima" data-action="set-prof-max" value="${esc(f.profMax)}" /></div>`}
+            ? `<input class="input" type="text" inputmode="decimal" placeholder="${esc(t('piscinaForm.profPlaceholder'))}" data-action="set-prof" value="${esc(f.prof)}" style="margin-top:9px" />`
+            : `<div style="display:flex;gap:9px;margin-top:9px"><input class="input" type="text" inputmode="decimal" placeholder="${esc(t('piscinaForm.profMinPlaceholder'))}" data-action="set-prof-min" value="${esc(f.profMin)}" /><input class="input" type="text" inputmode="decimal" placeholder="${esc(t('piscinaForm.profMaxPlaceholder'))}" data-action="set-prof-max" value="${esc(f.profMax)}" /></div>`}
         </div>
-        <div class="field"><label>Formato</label>
+        <div class="field"><label>${esc(t('piscinaForm.formato'))}</label>
           <select class="input" data-action="set-formato">
-            ${FORMATOS.map(([id, label]) => `<option value="${id}" ${f.formato === id ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+            ${FORMATOS.map(([id, label]) => `<option value="${id}" ${f.formato === id ? 'selected' : ''}>${esc(t(label))}</option>`).join('')}
           </select>
         </div>
         ${f.formato === 'irregular' ? `
         <div>
-          <p style="margin:0 0 9px;font-size:11.5px;line-height:1.5;color:rgba(233,233,237,.55)">Meça o nível, adicione um volume conhecido de água, meça de novo e calcule o total pela variação de nível. Informe o resultado aqui.</p>
-          <div class="field"><label>Litragem estimada (L)</label><input class="input" type="text" inputmode="decimal" data-action="set-litros-manuais" value="${esc(f.litrosManuais)}" /></div>
+          <p style="margin:0 0 9px;font-size:11.5px;line-height:1.5;color:rgba(var(--color-text-rgb),.55)">${esc(t('piscinaForm.irregularAjuda'))}</p>
+          <div class="field"><label>${esc(t('piscinaForm.litragemEstimada'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-litros-manuais" value="${esc(f.litrosManuais)}" /></div>
         </div>` : `
         <div style="display:flex;flex-direction:column;gap:10px">
           ${f.formas.map((fo, i) => renderShapeBlock(fo, i, f)).join('')}
           ${f.formato === 'composta' ? `
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" class="btn btn-secondary" data-action="add-forma" data-tipo="retangular" style="min-height:40px">+ Retângulo</button>
-            <button type="button" class="btn btn-secondary" data-action="add-forma" data-tipo="circular" style="min-height:40px">+ Círculo</button>
-            <button type="button" class="btn btn-secondary" data-action="add-forma" data-tipo="oval" style="min-height:40px">+ Oval</button>
+            <button type="button" class="btn btn-secondary" data-action="add-forma" data-tipo="retangular" style="min-height:40px">${esc(t('piscinaForm.addRetangulo'))}</button>
+            <button type="button" class="btn btn-secondary" data-action="add-forma" data-tipo="circular" style="min-height:40px">${esc(t('piscinaForm.addCirculo'))}</button>
+            <button type="button" class="btn btn-secondary" data-action="add-forma" data-tipo="oval" style="min-height:40px">${esc(t('piscinaForm.addOval'))}</button>
           </div>` : ''}
         </div>`}
       </div>
     </div>
     <div class="result-bar">
-      <div class="result-bar-info"><div class="result-bar-label">Litragem calculada</div><div class="result-bar-value">${esc(litragemTexto)}</div></div>
-      ${f.id ? `<button type="button" class="btn btn-ghost" data-action="excluir-piscina" data-id="${f.id}">Excluir piscina</button>` : ''}
-      <button type="button" class="btn btn-secondary" data-action="voltar-cliente-detalhe" style="min-height:46px">Cancelar</button>
-      <button type="button" class="btn btn-primary" data-action="salvar-piscina" style="min-height:46px;padding-inline:20px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Salvando…' : 'Salvar piscina'}</button>
+      <div class="result-bar-info"><div class="result-bar-label">${esc(t('piscinaForm.litragemCalculada'))}</div><div class="result-bar-value">${esc(litragemTexto)}</div></div>
+      ${f.id ? `<button type="button" class="btn btn-ghost" data-action="excluir-piscina" data-id="${f.id}">${esc(t('piscinaForm.excluir'))}</button>` : ''}
+      <button type="button" class="btn btn-secondary" data-action="voltar-cliente-detalhe" style="min-height:46px">${esc(t('common.cancelar'))}</button>
+      <button type="button" class="btn btn-primary" data-action="salvar-piscina" style="min-height:46px;padding-inline:20px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('common.salvando')) : esc(t('piscinaForm.salvar'))}</button>
     </div>`;
 }
 
@@ -532,7 +577,7 @@ function renderReadingCards(pool, parametrosAtivos) {
     return `
       <div class="reading-card">
         <div class="reading-top">
-          <div><div class="reading-name">${esc(par.nome)}</div><div class="reading-range">faixa ${numFmt(faixa.min)}–${numFmt(faixa.max)}${par.unidade ? ' ' + esc(par.unidade) : ''}</div></div>
+          <div><div class="reading-name">${esc(t(par.nome))}</div><div class="reading-range">${esc(t('medir.faixa', { min: numFmt(faixa.min), max: numFmt(faixa.max), unidade: par.unidade ? ' ' + par.unidade : '' }))}</div></div>
           <input class="input reading-input" type="text" inputmode="decimal" placeholder="—" data-action="set-leitura" data-param="${par.id}" value="${raw == null ? '' : esc(raw)}" style="color:${cor}" />
         </div>
         <div class="reading-track">
@@ -558,7 +603,7 @@ function renderChoiceRows(pool, parametrosAtivos, produtos) {
       if (!state.escolhas[chave] || !opts.some((o) => o.id === state.escolhas[chave])) state.escolhas[chave] = opts[0].id;
       rows.push(`
         <div class="choice-row">
-          <span class="choice-label">${dir === 'subir' ? 'Subir ' : 'Descer '}${esc(par.nome)}</span>
+          <span class="choice-label">${esc((dir === 'subir' ? t('medir.subir') : t('medir.descer')) + t(par.nome))}</span>
           <select class="input" data-action="set-escolha" data-dir="${chave}">
             ${opts.map((o) => `<option value="${o.id}" ${state.escolhas[chave] === o.id ? 'selected' : ''}>${esc(o.nomeComercial)} (${pctFmt(o.concentracao)})</option>`).join('')}
           </select>
@@ -572,8 +617,8 @@ function renderScreenMedir() {
   const pools = state.piscinas;
   if (!pools.length) {
     return `
-      <div class="screen-header"><div><div class="kicker">Diagnóstico cruzado</div><h2>Nova medição</h2></div></div>
-      <p class="empty-note">Cadastre um cliente e uma piscina primeiro, na aba Clientes.</p>`;
+      <div class="screen-header"><div><div class="kicker">${esc(t('medir.kicker'))}</div><h2>${esc(t('medir.titulo'))}</h2></div></div>
+      <p class="empty-note">${esc(t('medir.semPiscina'))}</p>`;
   }
   if (!state.medirPoolId || !pools.some((p) => p.id === state.medirPoolId)) state.medirPoolId = pools[0].id;
   const pool = piscinaPorId(state.medirPoolId);
@@ -583,23 +628,23 @@ function renderScreenMedir() {
   const preenchidos = Object.keys(state.leituras).filter((k) => parametrosAtivos.some((p) => p.id === k) && state.leituras[k] !== '' && state.leituras[k] != null).length;
   return `
     <div class="screen-header">
-      <div><div class="kicker">Diagnóstico cruzado</div><h2>Nova medição</h2></div>
-      <span style="font-size:11.5px;color:rgba(233,233,237,.45)">${preenchidos} de ${parametrosAtivos.length} preenchidos</span>
+      <div><div class="kicker">${esc(t('medir.kicker'))}</div><h2>${esc(t('medir.titulo'))}</h2></div>
+      <span style="font-size:11.5px;color:rgba(var(--color-text-rgb),.45)">${esc(t('medir.preenchidos', { n: preenchidos, m: parametrosAtivos.length }))}</span>
     </div>
     <div class="pool-select-row">
-      <span class="pill-label">Piscina</span>
+      <span class="pill-label">${esc(t('medir.piscina'))}</span>
       <select class="input" data-action="set-medir-pool">
         ${pools.map((p) => `<option value="${p.id}" ${p.id === pool.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
       </select>
     </div>
     <div class="reading-grid">${renderReadingCards(pool, parametrosAtivos)}</div>
     <div class="choices-block">
-      <div class="choices-title">Produtos para as correções</div>
+      <div class="choices-title">${esc(t('medir.produtosParaCorrecoes'))}</div>
       ${renderChoiceRows(pool, parametrosAtivos, produtos)}
     </div>
-    <p class="notice" style="margin-top:16px">As doses são regras gerais de referência e devem ser revisadas por um técnico/químico responsável antes do uso em ambiente coletivo. A fórmula de pH é uma aproximação de ordem de grandeza.</p>
+    <p class="notice" style="margin-top:16px">${esc(t('medir.aviso'))}</p>
     <div style="margin-top:16px;display:flex;gap:10px">
-      <button type="button" class="btn btn-primary" data-action="rodar-diagnostico" style="min-height:48px;flex:1;font-size:15px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Calculando…' : 'Calcular correções'}</button>
+      <button type="button" class="btn btn-primary" data-action="rodar-diagnostico" style="min-height:48px;flex:1;font-size:15px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('medir.calculando')) : esc(t('medir.calcularCorrecoes'))}</button>
     </div>`;
 }
 
@@ -607,35 +652,35 @@ function renderScreenMedir() {
 
 function renderResultStep(p, i) {
   const tags = [];
-  if (p.tempoEsperaHoras) tags.push('aguardar ' + formatHoras(p.tempoEsperaHoras));
-  const alerta = [p.limitesSeguranca].concat(p.avisos || []).filter(Boolean).join(' ');
+  if (p.tempoEsperaHoras) tags.push(t('resultado.aguardar', { tempo: formatHoras(p.tempoEsperaHoras) }));
+  const alerta = [p.limitesSeguranca].concat(p.avisos || []).filter(Boolean).map((k) => t(k)).join(' ');
   let doseTxt, produtoTxt;
   if (p.instrucaoOperacional) {
-    doseTxt = '—'; produtoTxt = p.instrucaoOperacional;
+    doseTxt = '—'; produtoTxt = t(p.instrucaoOperacional);
   } else if (p.instrucaoGeradorSalino) {
-    doseTxt = '—'; produtoTxt = p.instrucaoGeradorSalino;
+    doseTxt = '—'; produtoTxt = t(p.instrucaoGeradorSalino);
   } else if (p.dose) {
     doseTxt = dose3Fmt(p.dose.valor) + ' ' + p.dose.unidade;
-    produtoTxt = p.produto + (p.dose.densidadeAusente ? ' — densidade não cadastrada, valor em kg' : '');
+    produtoTxt = p.produto + (p.dose.densidadeAusente ? t('resultado.densidadeAusente') : '');
   } else {
-    doseTxt = 'sem dose';
-    produtoTxt = SEM_PRODUTO_TEXTO[p.parametroId] || 'Selecione, acima, um produto cadastrado para calcular a dose.';
+    doseTxt = t('resultado.semDose');
+    produtoTxt = t(SEM_PRODUTO_TEXTO[p.parametroId] || 'resultado.selecioneProduto');
   }
   const transicao = p.meta != null
     ? numFmt(p.valor) + ' → ' + numFmt(p.meta) + (p.unidade ? ' ' + p.unidade : '')
-    : numFmt(p.valor) + (p.unidade ? ' ' + p.unidade : '') + ' (' + p.rotuloStatus + ')';
+    : numFmt(p.valor) + (p.unidade ? ' ' + p.unidade : '') + ' (' + t(p.rotuloStatus) + ')';
   return `
     <div class="step-card">
       <div class="step-num">${i + 1}</div>
       <div class="step-body">
         <div class="step-head">
-          <span class="step-name">${esc(p.nome)}</span>
+          <span class="step-name">${esc(t(p.nome))}</span>
           <span class="step-transition">${esc(transicao)}</span>
         </div>
         <div class="step-dose">${esc(doseTxt)}</div>
         <div class="step-product">${esc(produtoTxt)}</div>
-        <p class="step-motive">${esc(p.motivo || '')}</p>
-        ${tags.length ? `<div class="step-tags">${tags.map((t) => `<span class="tag tag-neutral">${esc(t)}</span>`).join('')}</div>` : ''}
+        <p class="step-motive">${esc(p.motivo ? t(p.motivo) : '')}</p>
+        ${tags.length ? `<div class="step-tags">${tags.map((tag) => `<span class="tag tag-neutral">${esc(tag)}</span>`).join('')}</div>` : ''}
         ${alerta ? `<div class="step-alert">${esc(alerta)}</div>` : ''}
       </div>
     </div>`;
@@ -656,37 +701,37 @@ function renderScreenResultado() {
     <div class="back-row">
       <button type="button" class="btn btn-secondary btn-icon" data-action="voltar-medir"><i class="ph ph-arrow-left"></i></button>
       <div style="flex:1">
-        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.45)">${esc(cliente ? cliente.nome + ' · ' : '')}${esc(pool ? pool.nome : '')}</div>
-        <div style="font-weight:500;font-size:19px;line-height:1.2">Correções</div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(var(--color-text-rgb),.45)">${esc(cliente ? cliente.nome + ' · ' : '')}${esc(pool ? pool.nome : '')}</div>
+        <div style="font-weight:500;font-size:19px;line-height:1.2">${esc(t('resultado.titulo'))}</div>
       </div>
-      <button type="button" class="btn btn-ghost" data-action="baixar-pdf-resultado" style="font-size:12.5px"><i class="ph ph-file-pdf" style="font-size:16px"></i>PDF</button>
+      <button type="button" class="btn btn-ghost" data-action="baixar-pdf-resultado" style="font-size:12.5px"><i class="ph ph-file-pdf" style="font-size:16px"></i>${esc(t('common.pdf'))}</button>
     </div>
     ${interdicaoPasso ? `
     <div class="interdict-banner">
       <i class="ph ph-warning"></i>
-      <div><div class="interdict-title">Interditar o uso até corrigir</div><div class="interdict-text">${esc(interdicaoPasso.limitesSeguranca || '')}</div></div>
+      <div><div class="interdict-title">${esc(t('resultado.interditar'))}</div><div class="interdict-text">${esc(interdicaoPasso.limitesSeguranca ? t(interdicaoPasso.limitesSeguranca) : '')}</div></div>
     </div>` : ''}
     <div class="steps-list">
       ${fora.map((p, i) => renderResultStep(p, i)).join('')}
-      ${adequados.length ? `<div class="divider-label"><span>${adequados.length} parâmetro(s) dentro da faixa: ${esc(adequados.map((p) => p.nome).join(', '))}</span><span class="rule"></span></div>` : ''}
-      ${(r.naoInformados || []).length ? `<div class="divider-label"><span>Não informado: ${esc(r.naoInformados.join(', '))}</span><span class="rule"></span></div>` : ''}
-      ${passos.length === 0 ? `<p class="empty-note">Nenhuma leitura informada — volte e preencha ao menos um parâmetro.</p>` : ''}
+      ${adequados.length ? `<div class="divider-label"><span>${esc(t('resultado.dentroDaFaixa', { n: adequados.length, lista: adequados.map((p) => t(p.nome)).join(', ') }))}</span><span class="rule"></span></div>` : ''}
+      ${(r.naoInformados || []).length ? `<div class="divider-label"><span>${esc(t('resultado.naoInformado', { lista: r.naoInformados.map((k) => t(k)).join(', ') }))}</span><span class="rule"></span></div>` : ''}
+      ${passos.length === 0 ? `<p class="empty-note">${esc(t('resultado.nenhumaLeitura'))}</p>` : ''}
     </div>
     ${semItens ? '' : r.checklistAberto ? `
     <div class="checklist-card">
-      <div style="font-weight:500;font-size:17px">Produtos aplicados</div>
-      <p class="checklist-sub">Confirme a quantidade realmente usada — isso alimenta o relatório de gastos.</p>
+      <div style="font-weight:500;font-size:17px">${esc(t('resultado.produtosAplicados'))}</div>
+      <p class="checklist-sub">${esc(t('resultado.confirmeQuantidade'))}</p>
       ${itensChecklist.map((c, i) => `
         <div class="checklist-row">
           <label class="radio"><input type="checkbox" data-action="toggle-checklist-item" data-idx="${i}" ${c.on ? 'checked' : ''} /><span class="dot"></span></label>
-          <span class="checklist-label">${esc(c.passo.produto)} (${esc(c.passo.nome)})</span>
+          <span class="checklist-label">${esc(c.passo.produto)} (${esc(t(c.passo.nome))})</span>
           <input class="input" type="text" inputmode="decimal" data-action="set-checklist-qtd" data-idx="${i}" value="${esc(c.qtd)}" />
           <span class="checklist-unit">${esc(c.passo.dose.unidade)}</span>
         </div>`).join('')}
-      <button type="button" class="btn btn-primary btn-block" data-action="registrar-consumos" style="min-height:46px;margin-top:14px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Registrando…' : 'Registrar produtos aplicados'}</button>
+      <button type="button" class="btn btn-primary btn-block" data-action="registrar-consumos" style="min-height:46px;margin-top:14px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('resultado.registrando')) : esc(t('resultado.registrarAplicados'))}</button>
     </div>` : `
     <div style="margin-top:16px;display:flex;gap:10px">
-      <button type="button" class="btn btn-primary" data-action="abrir-checklist" style="min-height:48px;flex:1;font-size:15px">Confirmar aplicação</button>
+      <button type="button" class="btn btn-primary" data-action="abrir-checklist" style="min-height:48px;flex:1;font-size:15px">${esc(t('resultado.confirmarAplicacao'))}</button>
     </div>`}`;
 }
 
@@ -696,8 +741,8 @@ function renderScreenSal() {
   const pools = state.piscinas;
   if (!pools.length) {
     return `
-      <div class="screen-header"><div><div class="kicker">Gerador salino</div><h2>Calculadora de Sal</h2></div></div>
-      <p class="empty-note">Cadastre um cliente e uma piscina primeiro, na aba Clientes.</p>`;
+      <div class="screen-header"><div><div class="kicker">${esc(t('sal.kicker'))}</div><h2>${esc(t('sal.titulo'))}</h2></div></div>
+      <p class="empty-note">${esc(t('medir.semPiscina'))}</p>`;
   }
   if (!state.salPoolId || !pools.some((p) => p.id === state.salPoolId)) state.salPoolId = pools[0].id;
   const pool = piscinaPorId(state.salPoolId);
@@ -713,37 +758,37 @@ function renderScreenSal() {
     const dose = produto ? quantidadeEmUnidadeDoProduto(r.kg, produto) : null;
     heroHtml = `
       <div class="sal-hero">
-        <div class="sal-hero-kicker">Adicionar</div>
+        <div class="sal-hero-kicker">${esc(t('sal.adicionar'))}</div>
         <div class="sal-hero-value">${dose ? dose3Fmt(dose.valor) + ' ' + dose.unidade : '—'}</div>
         <div class="sal-hero-product">${produto ? esc(produto.nomeComercial) + ' · ' + pctFmt(produto.concentracao) : ''}</div>
-        <div class="sal-hero-detail">Sal medido ${numFmt(r.atual)} ppm → meta ${numFmt(r.meta)} ppm (variação de ${numFmt(r.meta - r.atual)} ppm em ${nf(pool.litros, 0)} L)${dose && dose.densidadeAusente ? ' — densidade não cadastrada, valor em kg' : ''}</div>
+        <div class="sal-hero-detail">${esc(t('sal.detalhe', { atual: numFmt(r.atual), meta: numFmt(r.meta), variacao: numFmt(r.meta - r.atual), litros: nf(pool.litros, 0) }))}${dose && dose.densidadeAusente ? esc(t('resultado.densidadeAusente')) : ''}</div>
         <div class="sal-hero-actions">
-          <span class="tag tag-neutral">aguardar 24 h</span>
-          <button type="button" class="btn btn-primary" data-action="registrar-sal" style="min-height:42px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Registrando…' : 'Registrar nos custos'}</button>
+          <span class="tag tag-neutral">${esc(t('sal.aguardar24h'))}</span>
+          <button type="button" class="btn btn-primary" data-action="registrar-sal" style="min-height:42px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('sal.registrando')) : esc(t('sal.registrarCustos'))}</button>
         </div>
       </div>
-      <p style="margin:10px 0 0;font-size:11.5px;line-height:1.5;color:rgba(233,233,237,.5)">Circular e escovar por várias horas; aguardar cerca de 24 h antes de remedir — o sal grosso demora a dissolver completamente.</p>`;
+      <p style="margin:10px 0 0;font-size:11.5px;line-height:1.5;color:rgba(var(--color-text-rgb),.5)">${esc(t('sal.ajudaDissolucao'))}</p>`;
   }
   return `
-    <div class="screen-header"><div><div class="kicker">Gerador salino</div><h2>Calculadora de Sal</h2></div></div>
-    <p class="screen-subtitle">Atalho para o dia a dia: informe o sal medido agora e o sal ideal desejado — a reposição sai direto, sem passar pelo diagnóstico completo.</p>
+    <div class="screen-header"><div><div class="kicker">${esc(t('sal.kicker'))}</div><h2>${esc(t('sal.titulo'))}</h2></div></div>
+    <p class="screen-subtitle">${esc(t('sal.subtitulo'))}</p>
     <div class="card" style="display:flex;flex-direction:column;gap:13px;margin-top:16px">
-      <div class="field"><label>Piscina</label>
+      <div class="field"><label>${esc(t('medir.piscina'))}</label>
         <select class="input" data-action="set-sal-pool">
           ${pools.map((p) => `<option value="${p.id}" ${p.id === pool.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
         </select>
       </div>
-      ${avisoSistema ? `<p class="notice-flat">Esta piscina está cadastrada com ${pool.sistemaDesinfeccao === 'ozonio' ? 'gerador de ozônio' : 'cloração manual'} — a calculadora parte do princípio de que existe um gerador salino instalado.</p>` : ''}
+      ${avisoSistema ? `<p class="notice-flat">${esc(t('sal.avisoSistema', { sistema: pool.sistemaDesinfeccao === 'ozonio' ? t('sistema.ozonio.curto') : t('sistema.manual.curto') }))}</p>` : ''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px">
-        <div class="field"><label>Sal medido agora (ppm)</label><input class="input" type="text" inputmode="decimal" data-action="set-sal-atual" value="${esc(state.salAtual)}" style="font-size:17px" /></div>
-        <div class="field"><label>Sal ideal desejado (ppm)</label><input class="input" type="text" inputmode="decimal" placeholder="Ex: ${numFmt(faixa.min)}–${numFmt(faixa.max)}" data-action="set-sal-meta" value="${esc(state.salMeta)}" style="font-size:17px" /></div>
-        <div class="field"><label>Produto de sal</label>
+        <div class="field"><label>${esc(t('sal.medidoAgora'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-sal-atual" value="${esc(state.salAtual)}" style="font-size:17px" /></div>
+        <div class="field"><label>${esc(t('sal.idealDesejado'))}</label><input class="input" type="text" inputmode="decimal" placeholder="${esc(t('sal.metaPlaceholder', { min: numFmt(faixa.min), max: numFmt(faixa.max) }))}" data-action="set-sal-meta" value="${esc(state.salMeta)}" style="font-size:17px" /></div>
+        <div class="field"><label>${esc(t('sal.produtoDeSal'))}</label>
           <select class="input" data-action="set-sal-produto">
             ${opcoesSal.map((o) => `<option value="${o.id}" ${state.salProdutoId === o.id ? 'selected' : ''}>${esc(o.nomeComercial)} (${pctFmt(o.concentracao)})</option>`).join('')}
           </select>
         </div>
       </div>
-      <button type="button" class="btn btn-primary" data-action="calcular-sal" style="min-height:46px;align-self:flex-start;padding-inline:18px">Calcular reposição</button>
+      <button type="button" class="btn btn-primary" data-action="calcular-sal" style="min-height:46px;align-self:flex-start;padding-inline:18px">${esc(t('sal.calcularReposicao'))}</button>
     </div>
     ${heroHtml}`;
 }
@@ -754,24 +799,24 @@ function renderHistoryItem(h) {
   const pool = piscinaPorId(h.piscinaId);
   const cliente = pool ? clientePorId(pool.clienteId) : null;
   const fora = h.passos.filter((p) => p.status !== 'adequado').length;
-  const resumo = h.passos.map((p) => p.nome + ' ' + numFmt(p.valor)).join(' · ');
+  const resumo = h.passos.map((p) => t(p.nome) + ' ' + numFmt(p.valor)).join(' · ');
   const aberto = !!state.histAbertos[h.id];
   const sistemaDesinfeccao = pool && ['salino', 'ozonio'].includes(pool.sistemaDesinfeccao) ? pool.sistemaDesinfeccao : 'manual';
   const naoInformados = PARAMETROS
     .filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao)
     .filter((p) => h.leituras[p.id] == null)
-    .map((p) => p.nome);
+    .map((p) => t(p.nome));
   return `
     <div class="history-item">
       <div class="history-top">
         <div><div class="history-date">${dataHoraFmt(h.data)}</div><div class="history-pool">${esc(cliente ? cliente.nome + ' — ' : '')}${esc(pool ? pool.nome : '—')}</div></div>
         <div class="history-tags">
-          <span class="tag" style="${fora > 0 ? 'border:1px solid var(--warn-400);color:var(--warn-400)' : 'background:var(--color-accent-800);color:var(--color-accent-100)'}">${fora > 0 ? fora + ' fora da faixa' : 'tudo adequado'}</span>
-          <button type="button" class="btn btn-ghost" data-action="baixar-pdf-historico" data-id="${h.id}" style="font-size:12.5px"><i class="ph ph-file-pdf" style="font-size:16px"></i>PDF</button>
+          <span class="tag" style="${fora > 0 ? 'border:1px solid var(--warn-400);color:var(--warn-400)' : 'background:var(--color-accent-800);color:var(--color-accent-100)'}">${fora > 0 ? esc(t('historico.foraDaFaixa', { n: fora })) : esc(t('historico.tudoAdequado'))}</span>
+          <button type="button" class="btn btn-ghost" data-action="baixar-pdf-historico" data-id="${h.id}" style="font-size:12.5px"><i class="ph ph-file-pdf" style="font-size:16px"></i>${esc(t('common.pdf'))}</button>
         </div>
       </div>
-      <p class="history-summary">${esc(resumo)}${naoInformados.length ? ' · Não informado: ' + esc(naoInformados.join(', ')) : ''}</p>
-      <button type="button" class="btn btn-ghost" data-action="alternar-historico" data-id="${h.id}" style="font-size:12.5px;margin-top:8px">${aberto ? 'Ocultar passos' : 'Ver os passos'}</button>
+      <p class="history-summary">${esc(resumo)}${naoInformados.length ? ' · ' + esc(t('resultado.naoInformado', { lista: naoInformados.join(', ') })) : ''}</p>
+      <button type="button" class="btn btn-ghost" data-action="alternar-historico" data-id="${h.id}" style="font-size:12.5px;margin-top:8px">${aberto ? esc(t('historico.ocultarPassos')) : esc(t('historico.verPassos'))}</button>
       ${aberto ? `<div class="history-steps">${h.passos.map((p) => {
         const v = historyStepView(p);
         return `<div class="history-step" style="box-shadow:inset 2px 0 0 ${v.marca}"><div class="history-step-title">${esc(v.titulo)}</div><div class="history-step-detail">${esc(v.detalhe)}</div></div>`;
@@ -785,19 +830,19 @@ function renderScreenHistorico() {
   if (state.histData) registros = registros.filter((h) => h.data.slice(0, 10) === state.histData);
   registros.sort((a, b) => new Date(b.data) - new Date(a.data));
   return `
-    <div class="screen-header"><div><div class="kicker">Relatórios salvos</div><h2>Histórico</h2></div></div>
+    <div class="screen-header"><div><div class="kicker">${esc(t('historico.kicker'))}</div><h2>${esc(t('historico.titulo'))}</h2></div></div>
     <div class="filter-row">
-      <div class="field" style="flex:1;min-width:180px"><label>Piscina</label>
+      <div class="field" style="flex:1;min-width:180px"><label>${esc(t('historico.piscina'))}</label>
         <select class="input" data-action="set-hist-pool">
-          <option value="todas" ${state.histPoolId === 'todas' ? 'selected' : ''}>Todas as piscinas</option>
+          <option value="todas" ${state.histPoolId === 'todas' ? 'selected' : ''}>${esc(t('common.todasAsPiscinas'))}</option>
           ${pools.map((p) => `<option value="${p.id}" ${state.histPoolId === p.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
         </select>
       </div>
-      <div class="field" style="flex:0 1 170px"><label>Filtrar por data</label><input class="input" type="date" data-action="set-hist-data" value="${esc(state.histData)}" /></div>
+      <div class="field" style="flex:0 1 170px"><label>${esc(t('historico.filtrarData'))}</label><input class="input" type="date" data-action="set-hist-data" value="${esc(state.histData)}" /></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:11px">
       ${registros.map(renderHistoryItem).join('')}
-      ${!registros.length ? `<p class="empty-note">Nenhum relatório encontrado para essa busca.</p>` : ''}
+      ${!registros.length ? `<p class="empty-note">${esc(t('historico.nenhumRelatorio'))}</p>` : ''}
     </div>`;
 }
 
@@ -817,7 +862,7 @@ function renderScreenCustos() {
     const preco = g.produto && g.produto.preco;
     return {
       nome: g.nome,
-      detalhe: dose3Fmt(g.qtd) + ' ' + g.unidade + (preco ? ' · ' + moeda(preco) + '/' + g.unidade : ' · sem preço cadastrado'),
+      detalhe: dose3Fmt(g.qtd) + ' ' + g.unidade + (preco ? ' · ' + moeda(preco) + '/' + g.unidade : ' · ' + t('custos.semPrecoCadastrado')),
       total: preco ? moeda(preco * g.qtd) : '—',
     };
   });
@@ -830,37 +875,38 @@ function renderScreenCustos() {
   });
   const chaves = Object.keys(porMes).sort();
   const maxMes = Math.max(1, ...chaves.map((k) => porMes[k]));
+  const localeMes = numLocale();
   const meses = chaves.map((k) => {
     const [y, m] = k.split('-');
     return {
-      rotulo: new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+      rotulo: new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(localeMes, { month: 'short' }).replace('.', ''),
       total: moeda(porMes[k]),
       altura: Math.max(6, Math.round((porMes[k] / maxMes) * 100)),
     };
   });
   const totalGeral = chaves.reduce((a, k) => a + porMes[k], 0);
   return `
-    <div class="screen-header"><div><div class="kicker">Consumo registrado</div><h2>Gastos com produtos</h2></div></div>
-    <p class="screen-subtitle">Vem das quantidades confirmadas no checklist de cada diagnóstico. Produtos sem preço cadastrado aparecem só com a quantidade usada.</p>
-    <div class="field" style="max-width:320px;margin:16px 0"><label>Filtrar por piscina</label>
+    <div class="screen-header"><div><div class="kicker">${esc(t('custos.kicker'))}</div><h2>${esc(t('custos.titulo'))}</h2></div></div>
+    <p class="screen-subtitle">${esc(t('custos.subtitulo'))}</p>
+    <div class="field" style="max-width:320px;margin:16px 0"><label>${esc(t('custos.filtrarPiscina'))}</label>
       <select class="input" data-action="set-custo-pool">
-        <option value="todas" ${state.custoPoolId === 'todas' ? 'selected' : ''}>Todas as piscinas</option>
+        <option value="todas" ${state.custoPoolId === 'todas' ? 'selected' : ''}>${esc(t('common.todasAsPiscinas'))}</option>
         ${pools.map((p) => `<option value="${p.id}" ${state.custoPoolId === p.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
       </select>
     </div>
-    <div class="divider-label"><span>Total por produto</span><span class="rule"></span></div>
+    <div class="divider-label"><span>${esc(t('custos.totalPorProduto'))}</span><span class="rule"></span></div>
     <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:24px">
       ${porProduto.map((p) => `<div class="cost-row"><div><div class="cost-name">${esc(p.nome)}</div><div class="cost-detail">${esc(p.detalhe)}</div></div><div class="cost-total">${esc(p.total)}</div></div>`).join('')}
-      ${!porProduto.length ? `<p style="margin:0;font-size:13px;color:rgba(233,233,237,.6)">Nenhum consumo registrado ainda. Registre pelo checklist após um diagnóstico.</p>` : ''}
+      ${!porProduto.length ? `<p style="margin:0;font-size:13px;color:rgba(var(--color-text-rgb),.6)">${esc(t('custos.nenhumConsumo'))}</p>` : ''}
     </div>
     ${meses.length ? `
-    <div class="divider-label"><span>Total por mês</span><span class="rule"></span></div>
+    <div class="divider-label"><span>${esc(t('custos.totalPorMes'))}</span><span class="rule"></span></div>
     <div class="bar-chart">
       <div class="bar-chart-row">
         ${meses.map((m) => `<div class="bar-chart-col"><span class="bar-chart-total">${esc(m.total)}</span><div class="bar-chart-bar" style="height:${m.altura}%"></div><span class="bar-chart-label">${esc(m.rotulo)}</span></div>`).join('')}
       </div>
     </div>
-    <div class="cost-total-row"><span class="lbl">Total geral (produtos com preço cadastrado)</span><span class="val">${moeda(totalGeral)}</span></div>` : ''}`;
+    <div class="cost-total-row"><span class="lbl">${esc(t('custos.totalGeral'))}</span><span class="val">${moeda(totalGeral)}</span></div>` : ''}`;
 }
 
 /* ── tela: produtos ──────────────────────────────────────────────────────── */
@@ -871,35 +917,35 @@ function renderScreenProdutos() {
   if (!state.catAtiva || !categorias.includes(state.catAtiva)) state.catAtiva = categorias[0] || null;
   const produtosVisiveis = produtos.filter((p) => p.tipo === state.catAtiva);
   const np = state.novoProduto || (state.novoProduto = novoProdutoVazio());
-  const template = TEMPLATES_PRODUTO.find((t) => t.tipo === np.tipo);
+  const template = TEMPLATES_PRODUTO.find((tp) => tp.tipo === np.tipo);
   return `
     <div class="back-row">
       <button type="button" class="btn btn-secondary btn-icon" data-action="voltar-clientes"><i class="ph ph-arrow-left"></i></button>
-      <h4>Produtos químicos</h4>
-      <button type="button" class="btn btn-primary" data-action="toggle-form-produto">${state.produtoFormAberto ? 'Fechar' : 'Novo produto'}</button>
+      <h4>${esc(t('produtos.titulo'))}</h4>
+      <button type="button" class="btn btn-primary" data-action="toggle-form-produto">${state.produtoFormAberto ? esc(t('produtos.fechar')) : esc(t('produtos.novoProduto'))}</button>
     </div>
     ${state.produtoFormAberto ? `
     <div class="product-form-grid">
-      <div class="field"><label>Tipo de produto</label>
+      <div class="field"><label>${esc(t('produtos.tipoProduto'))}</label>
         <select class="input" data-action="set-np-tipo">
-          ${TEMPLATES_PRODUTO.map((t) => `<option value="${esc(t.tipo)}" ${np.tipo === t.tipo ? 'selected' : ''}>${esc(t.tipo)}</option>`).join('')}
+          ${TEMPLATES_PRODUTO.map((tp) => `<option value="${esc(tp.tipo)}" ${np.tipo === tp.tipo ? 'selected' : ''}>${esc(tp.tipo)}</option>`).join('')}
         </select>
       </div>
-      <div class="field"><label>Nome comercial</label><input class="input" type="text" placeholder="Ex: Barrilha Leve Montreal" data-action="set-np-nome" value="${esc(np.nome)}" /></div>
-      <div class="field"><label>Fabricante / marca</label><input class="input" type="text" placeholder="Ex: Montreal" data-action="set-np-marca" value="${esc(np.marca)}" /></div>
-      <div class="field"><label>Princípio ativo</label><input class="input" type="text" data-action="set-np-principio" value="${esc(np.principio)}" /></div>
-      <div class="field"><label>Concentração / pureza (%)</label><input class="input" type="text" inputmode="decimal" data-action="set-np-concentracao" value="${esc(np.concentracao)}" /></div>
-      <div class="field"><label>Preço por ${np.estado === 'liquido' ? 'L' : 'kg'} (R$) — opcional</label><input class="input" type="text" inputmode="decimal" placeholder="12,50" data-action="set-np-preco" value="${esc(np.preco)}" /></div>
-      <div class="field"><label>Estado físico</label>
+      <div class="field"><label>${esc(t('produtos.nomeComercial'))}</label><input class="input" type="text" placeholder="${esc(t('produtos.nomeComercialPlaceholder'))}" data-action="set-np-nome" value="${esc(np.nome)}" /></div>
+      <div class="field"><label>${esc(t('produtos.fabricanteMarca'))}</label><input class="input" type="text" placeholder="${esc(t('produtos.fabricanteMarcaPlaceholder'))}" data-action="set-np-marca" value="${esc(np.marca)}" /></div>
+      <div class="field"><label>${esc(t('produtos.principioAtivo'))}</label><input class="input" type="text" data-action="set-np-principio" value="${esc(np.principio)}" /></div>
+      <div class="field"><label>${esc(t('produtos.concentracao'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-np-concentracao" value="${esc(np.concentracao)}" /></div>
+      <div class="field"><label>${esc(t('produtos.precoPor', { unidade: np.estado === 'liquido' ? 'L' : 'kg' }))}</label><input class="input" type="text" inputmode="decimal" placeholder="${esc(t('produtos.precoPlaceholder'))}" data-action="set-np-preco" value="${esc(np.preco)}" /></div>
+      <div class="field"><label>${esc(t('produtos.estadoFisico'))}</label>
         <span class="seg">
-          <label class="seg-opt"><input type="radio" name="estado" data-action="set-np-estado" data-tipo="solido" ${np.estado === 'solido' ? 'checked' : ''} />Sólido</label>
-          <label class="seg-opt"><input type="radio" name="estado" data-action="set-np-estado" data-tipo="liquido" ${np.estado === 'liquido' ? 'checked' : ''} />Líquido</label>
+          <label class="seg-opt"><input type="radio" name="estado" data-action="set-np-estado" data-tipo="solido" ${np.estado === 'solido' ? 'checked' : ''} />${esc(t('produtos.solido'))}</label>
+          <label class="seg-opt"><input type="radio" name="estado" data-action="set-np-estado" data-tipo="liquido" ${np.estado === 'liquido' ? 'checked' : ''} />${esc(t('produtos.liquido'))}</label>
         </span>
       </div>
-      ${np.estado === 'liquido' ? `<div class="field"><label>Densidade (kg/L)</label><input class="input" type="text" inputmode="decimal" data-action="set-np-densidade" value="${esc(np.densidade)}" /></div>` : ''}
+      ${np.estado === 'liquido' ? `<div class="field"><label>${esc(t('produtos.densidade'))}</label><input class="input" type="text" inputmode="decimal" data-action="set-np-densidade" value="${esc(np.densidade)}" /></div>` : ''}
       ${template && template.aviso ? `<p class="notice-flat span-all">${esc(template.aviso)}</p>` : ''}
       <div class="span-all" style="display:flex;gap:9px">
-        <button type="button" class="btn btn-primary" data-action="salvar-produto" style="min-height:46px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Salvando…' : 'Salvar produto'}</button>
+        <button type="button" class="btn btn-primary" data-action="salvar-produto" style="min-height:46px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('common.salvando')) : esc(t('produtos.salvar'))}</button>
       </div>
     </div>` : ''}
     <div class="category-row">
@@ -912,17 +958,24 @@ function renderScreenProdutos() {
       ${produtosVisiveis.map((p) => `
         <div class="product-card">
           <div class="product-card-top"><div class="product-card-name">${esc(p.nomeComercial)}</div><span class="tag tag-accent">${pctFmt(p.concentracao)}</span></div>
-          <div class="product-card-detail">${[esc(p.marca), esc(p.principioAtivo), p.estadoFisico === 'liquido' ? 'líquido' : 'sólido', p.preco ? moeda(p.preco) + '/' + (p.estadoFisico === 'liquido' ? 'L' : 'kg') : null].filter(Boolean).join(' · ')}</div>
+          <div class="product-card-detail">${[esc(p.marca), esc(p.principioAtivo), p.estadoFisico === 'liquido' ? esc(t('produtos.liquido').toLowerCase()) : esc(t('produtos.solido').toLowerCase()), p.preco ? moeda(p.preco) + '/' + (p.estadoFisico === 'liquido' ? 'L' : 'kg') : null].filter(Boolean).join(' · ')}</div>
           <div class="product-card-source">${esc(p.fonte || '')}</div>
-          <div class="product-card-actions"><button type="button" class="btn btn-ghost" data-action="excluir-produto" data-id="${p.id}" style="font-size:12px">Excluir</button></div>
+          <div class="product-card-actions"><button type="button" class="btn btn-ghost" data-action="excluir-produto" data-id="${p.id}" style="font-size:12px">${esc(t('produtos.excluir'))}</button></div>
         </div>`).join('')}
-      ${!produtosVisiveis.length ? `<p class="empty-note">Nenhum produto cadastrado nesta categoria ainda.</p>` : ''}
+      ${!produtosVisiveis.length ? `<p class="empty-note">${esc(t('produtos.nenhumNaCategoria'))}</p>` : ''}
     </div>`;
 }
 
 /* ── ações ───────────────────────────────────────────────────────────────── */
 
 const actions = {
+  // preferências (tema/idioma) — não fazem parte do `state`, sobrevivem ao logout
+  'alternar-tema': () => { definirTema(tema === 'dark' ? 'light' : 'dark'); },
+  'ciclar-idioma': () => {
+    const i = IDIOMAS_SUPORTADOS.indexOf(idioma);
+    definirIdioma(IDIOMAS_SUPORTADOS[(i + 1) % IDIOMAS_SUPORTADOS.length]);
+  },
+
   // navegação
   'nav-go': (el) => { state.tab = el.dataset.tab; state.screen = null; },
   'voltar-clientes': () => { state.screen = null; state.tab = 'clientes'; },
@@ -941,24 +994,24 @@ const actions = {
   'set-cliente-observacoes': (el) => { state.formCliente.observacoes = el.value; },
   'salvar-cliente': async () => {
     const f = state.formCliente;
-    if (!f.nome.trim()) { toast('Dê um nome ao cliente.'); return; }
+    if (!f.nome.trim()) { toast(t('clienteForm.deNomeAoCliente')); return; }
     await DB.salvarCliente({
       id: f.id, nome: f.nome.trim(), telefone: f.telefone.trim(), email: f.email.trim(),
       endereco: f.endereco.trim(), observacoes: f.observacoes.trim(),
     });
     state.clientes = await DB.listarClientes();
     state.screen = null; state.tab = 'clientes'; state.formCliente = null;
-    toast(f.id ? 'Cliente atualizado.' : 'Cliente cadastrado.');
+    toast(f.id ? t('clienteForm.atualizado') : t('clienteForm.cadastrado'));
   },
   'excluir-cliente': async (el) => {
-    if (!confirm('Excluir este cliente também exclui todas as piscinas, histórico e consumos associados a ele. Essa ação não pode ser desfeita. Continuar?')) return;
+    if (!confirm(t('clienteForm.confirmarExcluir'))) return;
     await DB.excluirCliente(el.dataset.id);
     const [clientes, piscinas, historico, consumos] = await Promise.all([
       DB.listarClientes(), DB.listarPiscinas(), DB.listarTodoHistorico(), DB.listarConsumos(),
     ]);
     state.clientes = clientes; state.piscinas = piscinas; state.historico = historico; state.consumos = consumos;
     state.screen = null; state.tab = 'clientes'; state.formCliente = null;
-    toast('Cliente excluído.');
+    toast(t('clienteForm.excluido'));
   },
 
   // piscinas
@@ -999,9 +1052,9 @@ const actions = {
   'remover-forma': (el) => { state.formPiscina.formas.splice(Number(el.dataset.idx), 1); },
   'salvar-piscina': async () => {
     const f = state.formPiscina;
-    if (!f.nome.trim()) { toast('Dê um nome à piscina.'); return; }
+    if (!f.nome.trim()) { toast(t('piscinaForm.deNomeAPiscina')); return; }
     const calc = litragemPreview(f);
-    if (!calc.ok) { toast('Confira as medidas — a litragem não pôde ser calculada.'); return; }
+    if (!calc.ok) { toast(t('piscinaForm.confiraMedidas')); return; }
     const registro = {
       id: f.id, clienteId: state.clienteAtualId, nome: f.nome.trim(), sistemaDesinfeccao: f.sistema,
       faixaSal: f.sistema === 'salino' && (f.salMin || f.salMax) ? { min: Number(f.salMin) || undefined, max: Number(f.salMax) || undefined } : null,
@@ -1014,10 +1067,10 @@ const actions = {
     await DB.salvarPiscina(registro);
     state.piscinas = await DB.listarPiscinas();
     state.screen = 'cliente-detalhe'; state.formPiscina = null;
-    toast(f.id ? 'Piscina atualizada.' : `Piscina cadastrada com ${Math.round(calc.litros).toLocaleString('pt-BR')} L.`);
+    toast(f.id ? t('piscinaForm.atualizada') : t('piscinaForm.cadastradaCom', { litros: Math.round(calc.litros).toLocaleString(numLocale()) }));
   },
   'excluir-piscina': async (el) => {
-    if (!confirm('Excluir esta piscina também exclui o histórico e os consumos associados a ela. Essa ação não pode ser desfeita. Continuar?')) return;
+    if (!confirm(t('piscinaForm.confirmarExcluir'))) return;
     const id = el.dataset.id;
     await DB.excluirPiscina(id);
     const [piscinas, historico, consumos] = await Promise.all([DB.listarPiscinas(), DB.listarTodoHistorico(), DB.listarConsumos()]);
@@ -1027,7 +1080,7 @@ const actions = {
     if (state.histPoolId === id) state.histPoolId = 'todas';
     if (state.custoPoolId === id) state.custoPoolId = 'todas';
     state.screen = 'cliente-detalhe'; state.formPiscina = null;
-    toast('Piscina excluída.');
+    toast(t('piscinaForm.excluida'));
   },
 
   // medir / resultado
@@ -1036,7 +1089,7 @@ const actions = {
   'set-escolha': (el) => { state.escolhas[el.dataset.dir] = el.value; },
   'rodar-diagnostico': async () => {
     const pool = piscinaPorId(state.medirPoolId);
-    if (!pool) { toast('Cadastre uma piscina primeiro.'); return; }
+    if (!pool) { toast(t('medir.cadastrePiscina')); return; }
     const sistemaDesinfeccao = ['salino', 'ozonio'].includes(pool.sistemaDesinfeccao) ? pool.sistemaDesinfeccao : 'manual';
     const parametrosAtivos = PARAMETROS.filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao);
     const leituras = {};
@@ -1044,7 +1097,7 @@ const actions = {
       const raw = state.leituras[p.id];
       if (raw !== '' && raw != null && Number.isFinite(Number(raw))) leituras[p.id] = Number(raw);
     });
-    if (Object.keys(leituras).length === 0) { toast('Informe ao menos uma leitura.'); return; }
+    if (Object.keys(leituras).length === 0) { toast(t('medir.informeLeitura')); return; }
 
     const produtos = state.produtos;
     const produtosPorParametro = {};
@@ -1094,11 +1147,11 @@ const actions = {
       piscinaId: pool.id, diagnosticoId: r.registro.id, produtoId: c.passo.produtoId,
       produtoNome: c.passo.produto, quantidade: Number(c.qtd), unidade: c.passo.dose.unidade,
     }));
-    if (itens.length === 0) { toast('Marque ao menos um produto com quantidade maior que zero.'); return; }
+    if (itens.length === 0) { toast(t('resultado.marqueProduto')); return; }
     await DB.registrarConsumos(itens);
     state.consumos = await DB.listarConsumos();
     state.screen = null; state.tab = 'custos'; state.resultado = null;
-    toast(itens.length + ' produto(s) registrado(s) no relatório de custos.');
+    toast(t('resultado.produtosRegistrados', { n: itens.length }));
   },
 
   // histórico
@@ -1127,11 +1180,11 @@ const actions = {
     const meta = Number(metaStr);
     const produtos = state.produtos;
     const produto = produtos.find((p) => p.id === state.salProdutoId) || produtosDe(produtos, ['Sal para Piscina'])[0] || null;
-    if (!pool || !produto || atualStr === '' || !Number.isFinite(atual)) { toast('Informe o sal medido e escolha a piscina.'); return; }
-    if (metaStr === '' || !Number.isFinite(meta)) { toast('Informe o sal ideal desejado.'); return; }
-    if (meta <= atual) { toast('A meta já foi atingida — não é necessário adicionar sal.'); return; }
+    if (!pool || !produto || atualStr === '' || !Number.isFinite(atual)) { toast(t('sal.informeMedidoEPiscina')); return; }
+    if (metaStr === '' || !Number.isFinite(meta)) { toast(t('sal.informeIdeal')); return; }
+    if (meta <= atual) { toast(t('sal.metaJaAtingida')); return; }
     const kg = calcularDose({ variacao: meta - atual, volumeLitros: pool.litros, concentracaoPercentual: produto.concentracao });
-    if (kg == null) { toast('Não foi possível calcular — confira a concentração cadastrada do produto.'); return; }
+    if (kg == null) { toast(t('sal.naoFoiPossivelCalcular')); return; }
     state.salResultado = { kg, atual, meta, produtoId: produto.id };
   },
   'registrar-sal': async () => {
@@ -1146,7 +1199,7 @@ const actions = {
     }]);
     state.consumos = await DB.listarConsumos();
     state.salResultado = null;
-    toast('Reposição de sal registrada no relatório de custos.');
+    toast(t('sal.repoRegistrada'));
   },
 
   // produtos
@@ -1156,10 +1209,10 @@ const actions = {
     if (state.produtoFormAberto) state.novoProduto = novoProdutoVazio();
   },
   'set-np-tipo': (el) => {
-    const t = TEMPLATES_PRODUTO.find((x) => x.tipo === el.value);
+    const tpl = TEMPLATES_PRODUTO.find((x) => x.tipo === el.value);
     state.novoProduto.tipo = el.value;
-    state.novoProduto.principio = t ? t.principioAtivo : '';
-    state.novoProduto.estado = t && t.estadoFisico === 'liquido' ? 'liquido' : 'solido';
+    state.novoProduto.principio = tpl ? tpl.principioAtivo : '';
+    state.novoProduto.estado = tpl && tpl.estadoFisico === 'liquido' ? 'liquido' : 'solido';
   },
   'set-np-nome': (el) => { state.novoProduto.nome = el.value; },
   'set-np-marca': (el) => { state.novoProduto.marca = el.value; },
@@ -1170,7 +1223,7 @@ const actions = {
   'set-np-densidade': (el) => { state.novoProduto.densidade = el.value; },
   'salvar-produto': async () => {
     const np = state.novoProduto;
-    if (!np.nome.trim() || !(Number(np.concentracao) > 0)) { toast('Informe o nome comercial e a concentração declarada.'); return; }
+    if (!np.nome.trim() || !(Number(np.concentracao) > 0)) { toast(t('produtos.informeNomeEConcentracao')); return; }
     await DB.salvarProduto({
       tipo: np.tipo, nomeComercial: np.nome.trim(), marca: np.marca.trim(),
       principioAtivo: np.principio, concentracao: Number(np.concentracao),
@@ -1181,13 +1234,13 @@ const actions = {
     state.produtos = await DB.listarProdutos();
     state.catAtiva = np.tipo;
     state.produtoFormAberto = false;
-    toast('Produto cadastrado.');
+    toast(t('produtos.cadastrado'));
   },
   'excluir-produto': async (el) => {
-    if (!confirm('Excluir este produto?')) return;
+    if (!confirm(t('produtos.confirmarExcluir'))) return;
     await DB.excluirProduto(el.dataset.id);
     state.produtos = await DB.listarProdutos();
-    toast('Produto excluído.');
+    toast(t('produtos.excluido'));
   },
 
   // autenticação
@@ -1196,7 +1249,7 @@ const actions = {
   'auth-set-senha': (el) => { state.authSenha = el.value; },
   'auth-submeter': async () => {
     state.authErro = '';
-    if (!state.authEmail.trim() || !state.authSenha) { state.authErro = 'Preencha e-mail e senha.'; return; }
+    if (!state.authEmail.trim() || !state.authSenha) { state.authErro = t('auth.preencherEmailSenha'); return; }
     try {
       if (state.authMode === 'entrar') await DB.signIn(state.authEmail.trim(), state.authSenha);
       else await DB.signUp(state.authEmail.trim(), state.authSenha);
@@ -1230,11 +1283,7 @@ function garantirShellApp() {
   if (document.getElementById('main')) return;
   document.getElementById('root').innerHTML = `
     <div class="nav-top" id="nav-top"></div>
-    <div class="mobile-header">
-      <i class="ph ph-drop brand-icon"></i>
-      <span class="brand-label" style="flex:1">Banheza Pool</span>
-      <button type="button" class="account-btn" data-action="sair"><i class="ph ph-sign-out"></i>Sair</button>
-    </div>
+    <div class="mobile-header" id="mobile-header"></div>
     <main class="main" id="main"></main>
     <nav class="nav-bottom" id="nav-bottom"></nav>
     <div class="toast" id="toast" hidden></div>`;
@@ -1243,15 +1292,15 @@ function garantirShellApp() {
 function renderAll() {
   const root = document.getElementById('root');
   if (state.booting || (!state.session)) {
-    root.innerHTML = state.booting ? '<div class="auth-screen"><p class="auth-note">Carregando…</p></div>' : renderAuthScreen();
+    root.innerHTML = state.booting ? `<div class="auth-screen"><p class="auth-note">${esc(t('common.carregando'))}</p></div>` : renderAuthScreen();
     return;
   }
   if (state.carregandoDados) {
-    root.innerHTML = '<div class="auth-screen"><p class="auth-note">Carregando seus dados…</p></div>';
+    root.innerHTML = `<div class="auth-screen"><p class="auth-note">${esc(t('auth.carregandoDados'))}</p></div>`;
     return;
   }
   if (state.erroCarregar) {
-    root.innerHTML = `<div class="auth-screen"><div class="auth-card"><p class="auth-error">${esc(state.erroCarregar)}</p><button type="button" class="btn btn-primary btn-block" data-action="tentar-de-novo">Tentar de novo</button></div></div>`;
+    root.innerHTML = `<div class="auth-screen"><div class="auth-card"><p class="auth-error">${esc(state.erroCarregar)}</p><button type="button" class="btn btn-primary btn-block" data-action="tentar-de-novo">${esc(t('common.tentarDeNovo'))}</button></div></div>`;
     return;
   }
   garantirShellApp();
@@ -1370,7 +1419,7 @@ async function carregarDadosIniciais() {
     state.clientes = clientes; state.piscinas = piscinas; state.produtos = produtos;
     state.historico = historico; state.consumos = consumos;
   } catch (e) {
-    state.erroCarregar = e.message || 'Não foi possível carregar seus dados.';
+    state.erroCarregar = e.message || t('auth.erroCarregarDados');
   }
   state.carregandoDados = false;
   renderAll();
@@ -1382,7 +1431,7 @@ function renderNaoConfigurado() {
       <div class="auth-card">
         <div class="auth-brand"><i class="ph ph-drop brand-icon"></i><span class="brand-label">Banheza Pool</span></div>
         <div class="auth-form">
-          <p class="auth-error">Este app ainda não está configurado. Abra <code>js/supabase-config.js</code> e preencha <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> com os dados do seu projeto Supabase (Project Settings → API), depois rode <code>supabase/schema.sql</code> no SQL Editor.</p>
+          <p class="auth-error">${t('auth.naoConfigurado')}</p>
         </div>
       </div>
     </div>`;

@@ -9,6 +9,14 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <script>
+    // Aplica o tema salvo antes do CSS pintar a tela, pra não piscar escuro→claro (ou o
+    // contrário) no primeiro instante de carregamento.
+    try {
+      var temaSalvo = localStorage.getItem('bp_tema');
+      if (temaSalvo === 'light' || temaSalvo === 'dark') document.documentElement.setAttribute('data-theme', temaSalvo);
+    } catch (e) { /* localStorage indisponível — segue com o tema padrão */ }
+  </script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -21,6 +29,7 @@
   <script src="js/volume.js"></script>
   <script src="js/products-data.js"></script>
   <script src="js/diagnostics.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/db.js"></script>
   <script src="js/pdf.js"></script>
   <script src="js/app.js"></script>

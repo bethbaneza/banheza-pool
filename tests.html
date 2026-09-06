@@ -202,7 +202,7 @@
       const passos = diagnosticar({ sal: 1000 }, 50000, {}, { sistemaDesinfeccao: 'salino' });
       assert(passos.length === 1 && passos[0].parametroId === 'sal', 'esperava o passo de sal');
       assert(passos[0].status === 'baixo', 'sal 1000 deveria ser baixo (abaixo de 2.700 ppm)');
-      assert(/geração de cloro/i.test(passos[0].limitesSeguranca), 'esperava limitesSeguranca específico de sal baixo');
+      assert(passos[0].limitesSeguranca === 'limite.sal.baixo', `esperava a chave de tradução do limite de sal baixo, veio ${passos[0].limitesSeguranca}`);
     });
 
     teste('diagnosticar: limitesSeguranca por objeto só aparece para o status cadastrado (Cianúrico baixo não tem aviso)', () => {
@@ -255,7 +255,7 @@
     teste('diagnosticar: limitesSeguranca aparece para Cloro fora da faixa (interditar o uso)', () => {
       const passos = diagnosticar({ cloro: 0.2 }, 50000, {});
       const passoCloro = passos.find((p) => p.parametroId === 'cloro');
-      assert(/interditar/i.test(passoCloro.limitesSeguranca), `esperava aviso de interdição, veio: ${passoCloro.limitesSeguranca}`);
+      assert(passoCloro.limitesSeguranca === 'limite.cloro.baixo', `esperava a chave de tradução do limite de cloro baixo, veio: ${passoCloro.limitesSeguranca}`);
     });
 
     teste('diagnosticar: limitesSeguranca não aparece quando o parâmetro está adequado', () => {
@@ -271,7 +271,7 @@
       const passoCloro = passos.find((p) => p.parametroId === 'cloro');
       assert(passoCianurico.status === 'alto', 'esperava cianúrico alto (80ppm)');
       assert(passoCloro.status === 'adequado', 'cloro 1,5 ainda é adequado pela faixa padrão');
-      assert(passoCloro.avisos && passoCloro.avisos.some((a) => /chlorine lock|cianúrico/i.test(a)), 'esperava aviso de chlorine lock no passo de cloro');
+      assert(passoCloro.avisos && passoCloro.avisos.includes('avisoCianuricoAlto.cloro'), 'esperava a chave de aviso de chlorine lock no passo de cloro');
     });
 
     teste('diagnosticar: sem Cianúrico alto, meta de Cloro continua no padrão (1.5)', () => {
@@ -285,7 +285,7 @@
       const passos = diagnosticar({ temperatura: 22 }, 50000, {});
       const passoTemp = passos.find((p) => p.parametroId === 'temperatura');
       assert(passoTemp.semProduto === true, 'temperatura não deveria ter produto/dose');
-      assert(passoTemp.rotuloStatus === 'fria', `esperava rótulo 'fria', veio '${passoTemp.rotuloStatus}'`);
+      assert(passoTemp.rotuloStatus === 'rotulo.temperatura.baixo', `esperava a chave de tradução do rótulo frio, veio '${passoTemp.rotuloStatus}'`);
       assert(typeof passoTemp.instrucaoOperacional === 'string' && passoTemp.instrucaoOperacional.length > 0);
     });
 
