@@ -1251,10 +1251,14 @@ function renderAll() {
 }
 
 function rerender() {
-  const main = document.getElementById('main');
+  // O container que importa é #root — ele engloba tanto a tela de login/criar conta (que
+  // renderiza direto nele, sem #main ainda existir) quanto o app depois de logado (dentro de
+  // #main). Restringir essa checagem a #main deixava a tela de login sem preservação de
+  // foco: cada letra digitada na senha recriava o campo do zero e o cursor saía dele.
+  const root = document.getElementById('root');
   const active = document.activeElement;
   let restore = null;
-  if (main && active instanceof HTMLElement && active.dataset && active.dataset.action && main.contains(active)) {
+  if (root && active instanceof HTMLElement && active.dataset && active.dataset.action && root.contains(active)) {
     restore = {
       action: active.dataset.action,
       idx: active.dataset.idx || '', id: active.dataset.id || '', dir: active.dataset.dir || '',
@@ -1265,9 +1269,9 @@ function rerender() {
   }
   renderAll();
   if (restore) {
-    const main2 = document.getElementById('main');
-    if (!main2) return;
-    const nodes = Array.from(main2.querySelectorAll(`[data-action="${restore.action}"]`));
+    const root2 = document.getElementById('root');
+    if (!root2) return;
+    const nodes = Array.from(root2.querySelectorAll(`[data-action="${restore.action}"]`));
     const match = nodes.find((n) =>
       (n.dataset.idx || '') === restore.idx &&
       (n.dataset.id || '') === restore.id &&
