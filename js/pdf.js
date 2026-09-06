@@ -1,43 +1,46 @@
 // Geração do relatório de diagnóstico em PDF, usando jsPDF (carregado via CDN no index.html).
+// Os campos de texto do "passo" (nome, motivo, limitesSeguranca, instrucaoOperacional,
+// instrucaoGeradorSalino, rotuloStatus, avisos) são chaves de tradução (ver diagnostics.js e
+// js/i18n.js) — por isso passam por t() aqui, no idioma que estiver ativo no momento do download.
 
 function formatarNumero(n, casas = 3) {
-  return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: casas });
+  return Number(n).toLocaleString(numLocale(), { maximumFractionDigits: casas });
 }
 
 function textoPasso(passo) {
-  const avisos = (passo.avisos || []).map((a) => `Atenção: ${a}`);
-  const limite = passo.limitesSeguranca ? [`Limite de segurança: ${passo.limitesSeguranca}`] : [];
+  const avisos = (passo.avisos || []).map((a) => t('pdf.atencao', { aviso: t(a) }));
+  const limite = passo.limitesSeguranca ? [t('pdf.limiteSeguranca', { limite: t(passo.limitesSeguranca) })] : [];
 
   if (passo.status === 'adequado') {
-    return [`${passo.nome}: adequado — leitura ${passo.valor}`, ...avisos];
+    return [`${t(passo.nome)}: ${t('pdf.adequadoLeitura', { valor: passo.valor })}`, ...avisos];
   }
   if (passo.instrucaoOperacional) {
     return [
-      `${passo.nome}: ${passo.rotuloStatus} — leitura ${passo.valor}`,
-      `Motivo provável: ${passo.motivo}`,
-      `O que fazer: ${passo.instrucaoOperacional}`,
+      `${t(passo.nome)}: ${t(passo.rotuloStatus)} — ${t('pdf.leitura', { valor: passo.valor })}`,
+      t('pdf.motivoProvavel', { motivo: t(passo.motivo) }),
+      t('pdf.oQueFazer', { instrucao: t(passo.instrucaoOperacional) }),
       ...limite,
     ];
   }
   if (passo.instrucaoGeradorSalino) {
     return [
-      `${passo.nome}: ${passo.rotuloStatus} (${passo.direcao === 'subir' ? 'subir' : 'descer'}) — leitura ${passo.valor}, meta ${passo.meta}`,
-      `Motivo provável: ${passo.motivo}`,
-      `O que fazer: ${passo.instrucaoGeradorSalino}`,
-      `Aguardar: ${passo.tempoEsperaHoras}h de circulação. ${passo.instrucaoRemedicao}`,
+      `${t(passo.nome)}: ${t(passo.rotuloStatus)} (${t(passo.direcao === 'subir' ? 'direcao.subir' : 'direcao.descer')}) — ${t('pdf.leitura', { valor: passo.valor })}, ${t('pdf.meta', { meta: passo.meta })}`,
+      t('pdf.motivoProvavel', { motivo: t(passo.motivo) }),
+      t('pdf.oQueFazer', { instrucao: t(passo.instrucaoGeradorSalino) }),
+      t('pdf.aguardar', { tempo: passo.tempoEsperaHoras + 'h', instrucao: t(passo.instrucaoRemedicao) }),
       ...limite,
       ...avisos,
     ];
   }
   const doseTxt = passo.dose
-    ? `${formatarNumero(passo.dose.valor)} ${passo.dose.unidade} de ${passo.produto}` +
-      (passo.dose.densidadeAusente ? ' [ATENÇÃO: produto líquido sem densidade cadastrada — valor em kg, não em litros]' : '')
-    : 'nenhum produto selecionado para calcular a dose';
+    ? t('pdf.doseTexto', { valor: formatarNumero(passo.dose.valor), unidade: passo.dose.unidade, produto: passo.produto }) +
+      (passo.dose.densidadeAusente ? t('pdf.densidadeAusente') : '')
+    : t('pdf.nenhumProduto');
   return [
-    `${passo.nome}: ${passo.rotuloStatus} (${passo.direcao === 'subir' ? 'subir' : 'descer'}) — leitura ${passo.valor}, meta ${passo.meta}`,
-    `Motivo provável: ${passo.motivo}`,
-    `Dose calculada: ${doseTxt}`,
-    `Aguardar: ${passo.tempoEsperaHoras}h de circulação. ${passo.instrucaoRemedicao}`,
+    `${t(passo.nome)}: ${t(passo.rotuloStatus)} (${t(passo.direcao === 'subir' ? 'direcao.subir' : 'direcao.descer')}) — ${t('pdf.leitura', { valor: passo.valor })}, ${t('pdf.meta', { meta: passo.meta })}`,
+    t('pdf.motivoProvavel', { motivo: t(passo.motivo) }),
+    t('pdf.doseCalculada', { dose: doseTxt }),
+    t('pdf.aguardar', { tempo: passo.tempoEsperaHoras + 'h', instrucao: t(passo.instrucaoRemedicao) }),
     ...limite,
     ...avisos,
   ];
@@ -46,9 +49,10 @@ function textoPasso(passo) {
 // piscina = registro salvo (Storage.listarPiscinas()); registro = { data, leituras, passos }
 function gerarPdfDiagnostico(piscina, registro) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert('Não foi possível carregar o gerador de PDF. Verifique sua conexão com a internet e tente novamente.');
+    alert(t('pdf.erroCarregar'));
     return;
   }
+  const localePdf = numLocale();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'pt' });
   const margemEsquerda = 48;
@@ -74,14 +78,14 @@ function gerarPdfDiagnostico(piscina, registro) {
     });
   }
 
-  escrever('Relatório de Diagnóstico — Calculadora e Assistente de Piscinas', { tamanho: 15, negrito: true });
+  escrever(t('pdf.tituloRelatorio'), { tamanho: 15, negrito: true });
   novaLinha(4);
-  escrever(`Piscina: ${piscina.nome} (${Math.round(piscina.litros).toLocaleString('pt-BR')} L)`, { negrito: true });
-  escrever(`Data: ${new Date(registro.data).toLocaleString('pt-BR')}`);
+  escrever(`${t('pdf.piscina')}: ${piscina.nome} (${Math.round(piscina.litros).toLocaleString(localePdf)} L)`, { negrito: true });
+  escrever(`${t('pdf.data')}: ${new Date(registro.data).toLocaleString(localePdf)}`);
   novaLinha(8);
 
   const l = registro.leituras;
-  escrever('Leituras informadas', { tamanho: 12, negrito: true });
+  escrever(t('pdf.leiturasInformadas'), { tamanho: 12, negrito: true });
   // Nem todo diagnóstico preenche os mesmos parâmetros (o diagnóstico cruzado aceita qualquer
   // subconjunto) — lista todos os parâmetros aplicáveis a esta piscina (PARAMETROS, de
   // diagnostics.js), marcando explicitamente como "Não informado" quem não tem leitura, em vez
@@ -91,12 +95,12 @@ function gerarPdfDiagnostico(piscina, registro) {
     .filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao)
     .map((p) => {
       const v = l[p.id];
-      return v != null ? `${p.nome}: ${v}${p.unidade ? ' ' + p.unidade : ''}` : `${p.nome}: Não informado`;
+      return v != null ? `${t(p.nome)}: ${v}${p.unidade ? ' ' + p.unidade : ''}` : `${t(p.nome)}: ${t('pdf.naoInformado')}`;
     });
   escrever(leiturasTexto.join('   |   '));
   novaLinha(8);
 
-  escrever('Diagnóstico', { tamanho: 12, negrito: true });
+  escrever(t('pdf.diagnostico'), { tamanho: 12, negrito: true });
   registro.passos.forEach((passo, i) => {
     novaLinha(4);
     const linhas = textoPasso(passo);
@@ -105,12 +109,7 @@ function gerarPdfDiagnostico(piscina, registro) {
   });
 
   novaLinha(12);
-  escrever(
-    'Aviso: as fórmulas de dosagem são regras gerais de referência. A aplicação final deve sempre seguir a ' +
-      'concentração real do produto cadastrado, e devem ser revisadas por um técnico/químico responsável antes ' +
-      'do uso em ambiente coletivo.',
-    { tamanho: 9 }
-  );
+  escrever(t('pdf.aviso'), { tamanho: 9 });
 
   const dataArquivo = new Date(registro.data).toISOString().slice(0, 10);
   const nomeArquivo = `diagnostico-${piscina.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${dataArquivo}.pdf`;

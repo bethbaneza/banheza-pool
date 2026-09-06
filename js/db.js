@@ -22,17 +22,17 @@ const supabaseClient = DB_CONFIGURADO ? window.supabase.createClient(SUPABASE_UR
 
 function traduzErroAuth(error) {
   const msg = (error && error.message) || '';
-  if (/Invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
-  if (/User already registered/i.test(msg)) return 'Já existe uma conta com este e-mail.';
-  if (/Password should be at least/i.test(msg)) return 'A senha precisa ter pelo menos 6 caracteres.';
-  if (/Email not confirmed/i.test(msg)) return 'Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).';
-  if (/Unable to validate email address/i.test(msg)) return 'E-mail inválido.';
-  if (/Failed to fetch/i.test(msg)) return 'Não foi possível conectar ao servidor — confira sua internet e as chaves em js/supabase-config.js.';
-  return msg || 'Não foi possível completar a operação.';
+  if (/Invalid login credentials/i.test(msg)) return t('dbErro.credenciaisInvalidas');
+  if (/User already registered/i.test(msg)) return t('dbErro.emailJaCadastrado');
+  if (/Password should be at least/i.test(msg)) return t('dbErro.senhaMinima');
+  if (/Email not confirmed/i.test(msg)) return t('dbErro.emailNaoConfirmado');
+  if (/Unable to validate email address/i.test(msg)) return t('dbErro.emailInvalido');
+  if (/Failed to fetch/i.test(msg)) return t('dbErro.semConexao');
+  return msg || t('dbErro.generico');
 }
 
 function checar({ error }) {
-  if (error) throw new Error(error.message || 'Não foi possível completar a operação.');
+  if (error) throw new Error(error.message || t('dbErro.generico'));
 }
 
 /* ── conversão linha do banco <-> objeto do app ─────────────────────────────── */

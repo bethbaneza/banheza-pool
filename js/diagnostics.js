@@ -59,141 +59,143 @@ function limiteSegurancaPara(parametro, status) {
 // uma pesquisa de FISPQ por marca como o Módulo 2; precisam ser confirmadas por um
 // técnico/químico responsável antes do uso real, especialmente Sal (varia por fabricante de
 // gerador) e pH (que já carrega o mesmo aviso desde a versão anterior).
+// Os campos de texto abaixo (nome, causas, limitesSeguranca, instrucaoRemedicao,
+// instrucaoOperacional, instrucaoGeradorSalino, avisoOzonio, rotulosStatus) guardam CHAVES de
+// tradução (ver js/i18n.js), não o texto final em português — quem exibe (app.js/pdf.js) chama
+// t(chave) na hora de renderizar, já no idioma escolhido pela pessoa. Isso mantém esta tabela
+// de decisão só com dados/lógica, sem amarrar o motor de diagnóstico a um idioma fixo.
 const PARAMETROS = [
   {
     id: 'alcalinidade',
-    nome: 'Alcalinidade Total',
+    nome: 'param.alcalinidade.nome',
     unidade: 'ppm',
     faixa: { min: 80, max: 120 },
     metaPadrao: 100,
     causas: {
-      alto: 'Uso excessivo de elevadores de alcalinidade/pH, ou água de reposição com alcalinidade naturalmente alta.',
-      baixo: 'Uso excessivo de produtos ácidos, água de reposição com alcalinidade naturalmente baixa, ou diluição por chuva.',
+      alto: 'causa.alcalinidade.alto',
+      baixo: 'causa.alcalinidade.baixo',
     },
-    limitesSeguranca:
-      'Corrigir em etapas menores quando a variação necessária for grande, remedindo entre uma aplicação e outra. Aplicar com circulação ligada.',
+    limitesSeguranca: 'limite.alcalinidade',
     tempoEsperaHoras: 5,
-    instrucaoRemedicao: 'Circular por pelo menos 4–6 horas antes de remedir (o bicarbonato de sódio dissolve mais lentamente).',
+    instrucaoRemedicao: 'remedir.alcalinidade',
     calcularDose: (variacao, volumeLitros, concentracaoPercentual) =>
       calcularDose({ variacao, volumeLitros, concentracaoPercentual }),
   },
   {
     id: 'ph',
-    nome: 'pH',
+    nome: 'param.ph.nome',
     unidade: '',
     faixa: { min: 7.2, max: 7.6 },
     metaPadrao: 7.4,
     causas: {
-      alto: 'Uso recente de produtos alcalinizantes, alcalinidade total muito alta, evaporação, ou alta taxa de banhistas.',
-      baixo: 'Uso recente de produtos ácidos ou cloro muito ácido, chuva recente, ou alcalinidade total muito baixa.',
+      alto: 'causa.ph.alto',
+      baixo: 'causa.ph.baixo',
     },
-    limitesSeguranca:
-      'Nunca misturar produtos ácidos e alcalinizantes diretamente entre si. Aplicar com circulação ligada e piscina sem banhistas. Aguardar diluição completa antes de nova medição.',
+    limitesSeguranca: 'limite.ph',
     tempoEsperaHoras: 0.75,
-    instrucaoRemedicao: 'Circular por 30–60 minutos após aplicação antes de medir novamente.',
+    instrucaoRemedicao: 'remedir.ph',
     calcularDose: (variacao, volumeLitros, concentracaoPercentual) =>
       calcularDose({ variacao, volumeLitros, concentracaoPercentual }),
   },
   {
     id: 'dureza',
-    nome: 'Dureza Cálcica',
+    nome: 'param.dureza.nome',
     unidade: 'ppm',
     faixa: { min: 200, max: 400 },
     metaPadrao: 300,
     causas: {
-      alto: 'Evaporação concentrando minerais, água de reposição naturalmente dura, ou uso frequente de produtos à base de cálcio.',
-      baixo: 'Água de reposição naturalmente mole, diluição por chuva, ou esvaziamento parcial recente.',
+      alto: 'causa.dureza.alto',
+      baixo: 'causa.dureza.baixo',
     },
     limitesSeguranca: {
-      baixo: 'Dureza muito baixa: água "agressiva", corrosiva para superfícies, tubulações e equipamentos metálicos.',
-      alto: 'Dureza muito alta: favorece incrustação (calcário) em paredes, filtros e aquecedores, e deixa a água turva.',
+      baixo: 'limite.dureza.baixo',
+      alto: 'limite.dureza.alto',
     },
     tempoEsperaHoras: 4,
-    instrucaoRemedicao: 'Circular por algumas horas antes de remedir; o efeito na água leva tempo para se homogeneizar.',
+    instrucaoRemedicao: 'remedir.dureza',
     calcularDose: (variacao, volumeLitros, concentracaoPercentual) =>
       calcularDose({ variacao, volumeLitros, concentracaoPercentual }),
   },
   {
     id: 'cianurico',
-    nome: 'Ácido Cianúrico (Estabilizante)',
+    nome: 'param.cianurico.nome',
     unidade: 'ppm',
     faixa: { min: 30, max: 50 },
     metaPadrao: 40,
     causas: {
-      alto: 'Uso frequente de clorante estabilizado (tricloro/dicloro), ou pouca renovação de água há muito tempo.',
-      baixo: 'Piscina nova, diluição por chuva/reposição de água, ou uso de cloro sem estabilizante.',
+      alto: 'causa.cianurico.alto',
+      baixo: 'causa.cianurico.baixo',
     },
     limitesSeguranca: {
-      alto: 'CYA muito alto "trava" parte do cloro livre (efeito conhecido como chlorine lock), reduzindo a desinfecção real mesmo com cloro livre medido como adequado.',
+      alto: 'limite.cianurico.alto',
     },
     tempoEsperaHoras: 6,
-    instrucaoRemedicao: 'Circular por várias horas — o ácido cianúrico dissolve mais lentamente que a maioria dos produtos.',
+    instrucaoRemedicao: 'remedir.cianurico',
     calcularDose: (variacao, volumeLitros, concentracaoPercentual) =>
       calcularDose({ variacao, volumeLitros, concentracaoPercentual }),
   },
   {
     id: 'sal',
-    nome: 'Sal',
+    nome: 'param.sal.nome',
     unidade: 'ppm',
     faixa: { min: 2700, max: 3400 },
     metaPadrao: 3000,
     apenasSistema: 'salino',
     causas: {
-      alto: 'Adição de sal além do necessário, ou evaporação sem reposição de água correspondente.',
-      baixo: 'Reposição de água doce, retrolavagem do filtro, ou diluição por chuva.',
+      alto: 'causa.sal.alto',
+      baixo: 'causa.sal.baixo',
     },
     limitesSeguranca: {
-      baixo: 'Sal muito baixo: pode reduzir ou interromper a geração de cloro pelo gerador salino, e em casos extremos danificar a célula por falta de condutividade adequada.',
-      alto: 'Sal muito alto: acelera a corrosão de peças metálicas e equipamentos, e fica perceptível ao paladar.',
+      baixo: 'limite.sal.baixo',
+      alto: 'limite.sal.alto',
     },
     tempoEsperaHoras: 24,
-    instrucaoRemedicao: 'Circular e escovar por várias horas; aguardar cerca de 24h antes de remedir (o sal grosso demora a dissolver completamente).',
+    instrucaoRemedicao: 'remedir.sal',
     calcularDose: (variacao, volumeLitros, concentracaoPercentual) =>
       calcularDose({ variacao, volumeLitros, concentracaoPercentual }),
   },
   {
     id: 'cloro',
-    nome: 'Cloro Livre',
+    nome: 'param.cloro.nome',
     unidade: 'ppm',
     faixa: { min: 0.5, max: 3 },
     metaPadrao: 1.5,
     causas: {
-      alto: 'Dosagem recente excessiva, ou baixa circulação de banhistas consumindo o produto.',
-      baixo: 'Consumo por carga de banhistas, calor/radiação UV, estabilizante insuficiente, ou pH fora da faixa.',
+      alto: 'causa.cloro.alto',
+      baixo: 'causa.cloro.baixo',
     },
     limitesSeguranca: {
-      baixo: 'Cloro muito baixo: interditar o uso até corrigir (risco sanitário).',
-      alto: 'Cloro muito alto: interditar o uso até baixar a níveis seguros (risco de irritação).',
+      baixo: 'limite.cloro.baixo',
+      alto: 'limite.cloro.alto',
     },
     tempoEsperaHoras: 0.75,
-    instrucaoRemedicao: 'Circular por 30–60 minutos após aplicação antes de liberar o uso da piscina.',
+    instrucaoRemedicao: 'remedir.cloro',
     calcularDose: (variacao, volumeLitros, concentracaoPercentual) =>
       calcularDose({ variacao, volumeLitros, concentracaoPercentual }),
     instrucaoGeradorSalino: {
-      subir: 'Piscina com gerador salino: confirme o nível de Sal e aumente a produção (%) do gerador conforme o manual do equipamento, em vez de dosar clorante manual.',
-      descer: 'Piscina com gerador salino: reduza a produção (%) do gerador conforme o manual do equipamento.',
+      subir: 'geradorSalino.cloro.subir',
+      descer: 'geradorSalino.cloro.descer',
     },
-    avisoOzonio:
-      'Piscina com gerador de ozônio: o ozônio faz parte da desinfecção, então a meta de cloro livre real pode ser bem menor que a faixa padrão (0,5–3 ppm). Não há um valor de referência único — confirme com um técnico responsável a faixa reduzida recomendada para o seu sistema antes de dosar.',
+    avisoOzonio: 'avisoOzonio.cloro',
   },
   {
     id: 'temperatura',
-    nome: 'Temperatura',
+    nome: 'param.temperatura.nome',
     unidade: '°C',
     faixa: { min: 26, max: 30 },
     metaPadrao: 28,
     semProduto: true,
-    rotulosStatus: { baixo: 'fria', alto: 'quente' },
+    rotulosStatus: { baixo: 'rotulo.temperatura.baixo', alto: 'rotulo.temperatura.alto' },
     causas: {
-      alto: 'Aquecimento excessivo, exposição solar direta prolongada, ou clima muito quente.',
-      baixo: 'Clima frio, ausência de aquecimento, ou perda de calor noturna.',
+      alto: 'causa.temperatura.alto',
+      baixo: 'causa.temperatura.baixo',
     },
     limitesSeguranca: {
-      alto: 'Água muito quente acelera a degradação do cloro e favorece a proliferação de algas e bactérias — atenção redobrada ao cloro livre em dias muito quentes.',
+      alto: 'limite.temperatura.alto',
     },
     instrucaoOperacional: {
-      alto: 'Considere usar sombreamento ou reduzir/desligar o aquecimento. Atenção: temperatura alta acelera o consumo de cloro.',
-      baixo: 'Considere ligar o aquecedor ou usar uma capa térmica.',
+      alto: 'operacional.temperatura.alto',
+      baixo: 'operacional.temperatura.baixo',
     },
   },
 ];
@@ -220,7 +222,7 @@ function diagnosticar(leituras, volumeLitros, produtosPorParametro, opcoes = {})
 
     const faixa = faixasCustom[parametro.id] || parametro.faixa;
     const status = classificar(valor, faixa.min, faixa.max);
-    const rotuloStatus = (parametro.rotulosStatus && parametro.rotulosStatus[status]) || status;
+    const rotuloStatus = (parametro.rotulosStatus && parametro.rotulosStatus[status]) || ('rotulo.status.' + status);
 
     if (parametro.id === 'cianurico') cianuricoAlto = status === 'alto';
 
@@ -230,9 +232,7 @@ function diagnosticar(leituras, volumeLitros, produtosPorParametro, opcoes = {})
     const avisos = [];
     if (parametro.id === 'cloro' && sistemaDesinfeccao === 'ozonio') avisos.push(parametro.avisoOzonio);
     if (parametro.id === 'cloro' && cianuricoAlto) {
-      avisos.push(
-        'Ácido Cianúrico está alto nesta leitura — isso "trava" parte do cloro livre (chlorine lock). Para compensar, considere manter o Cloro Livre na parte de cima da faixa (perto de 3 ppm) em vez do meio; confirme com um técnico responsável se isso é suficiente para o seu caso.'
-      );
+      avisos.push('avisoCianuricoAlto.cloro');
     }
 
     if (status === 'adequado') {
