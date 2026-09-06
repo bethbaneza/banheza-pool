@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Testes — Banheza Pool</title>
+  <style>
+    body { font-family: monospace; padding: 1.5rem; background: #111; color: #eee; }
+    .ok { color: #6f6; }
+    .fail { color: #f66; font-weight: bold; }
+    #resumo { font-size: 1.1rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Testes das fórmulas (volume.js e diagnostics.js)</h1>
+  <div id="resumo"></div>
+  <div id="saida"></div>
+
+  <script src="js/volume.js"></script>
+  <script src="js/diagnostics.js"></script>
+  <script src="js/chart.js"></script>
+  <script>
+    const saida = document.getElementById('saida');
+    let total = 0, falhas = 0;
+
+    function aproxIgual(a, b, epsilon = 0.01) {
+      return Math.abs(a - b) <= epsilon;
+    }
+
+    function teste(nome, fn) {
+      total++;
+      const linha = document.createElement('div');
+      try {
+        fn();
+        linha.className = 'ok';
+        linha.textContent = `OK — ${nome}`;
+      } catch (e) {
+        falhas++;
+        linha.className = 'fail';
+        linha.textContent = `FALHOU — ${nome}: ${e.message}`;
+      }
+      saida.appendChild(linha);
+    }
+
+    function assert(cond, msg) {
+      if (!cond) throw new Error(msg || 'condição falsa');
+    }
+
+    // ---------- volume.js ----------
+    teste('retangular 4m x 2m x 1.5m = 12000 L', () => {
+      const r = calcularLitragem({
+        formas: [{ tipo: 'retangular', unidade: 'm', comprimento: 4, largura: 2 }],
+        profundidade: { modo: 'unica', unidade: 'm', unica: 1.5 },
+      });
+      assert(r.ok, 'esperava ok=true');
+      assert(aproxIgual(r.litros, 12000), `esperava ~12000, veio ${r.litros}`);
+    });
+
+    teste('retangular em centímetros equivale ao mesmo em metros', () => {
+      const emCm = calcularLitragem({
+        formas: [{ tipo: 'retangular', unidade: 'cm', comprimento: 400, largura: 200 }],
+        profundidade: { modo: 'unica', unidade: 'cm', unica: 150 },
+      });
+      const emM = calcularLitragem({
+        formas: [{ tipo: 'retangular', unidade: 'm', comprimento: 4, largura: 2 }],
+        profundidade: { modo: 'unica', unidade: 'm', unica: 1.5 },
+      });
+      assert(aproxIgual(emCm.litros, emM.litros), `${emCm.litros} != ${emM.litros}`);
+    });
+
+    teste('circular diâmetro 4m, profundidade 1m ≈ 12566 L', () => {
+      const r = calcularLitragem({
+        formas: [{ tipo: 'circular', unidade: 'm', diametro: 4 }],
+        profundidade: { modo: 'unica', unidade: 'm', unica: 1 },
+      });
+      assert(r.ok, 'esperava ok=true');
+      assert(aproxIgual(r.litros, 12566.37, 1), `esperava ~12566, veio ${r.litros}`);
+    });
+
+    teste('composta soma as áreas de duas formas retangulares', () => {
+      const umaForma = calcularLitragem({
+        formas: [{ tipo: 'retangular', unidade: 'm', comprimento: 4, largura: 2 }],
+        profundidade: { modo: 'unica', unidade: 'm', unica: 1.5 },
+      });
+      const duasFormas = calcularLitragem({
+        formas: [
+          { tipo: 'retangular', unidade: 'm', comprimento: 4, largura: 2 },
+          { tipo: 'retangular', unidade: 'm', comprimento: 4, largura: 2 },
+        ],
+        profundidade: { modo: 'unica', unidade: 'm', unica: 1.5 },
+      });
+      assert(aproxIgual(duasFormas.litros, umaForma.litros * 2), `esperava o dobro, veio ${duasFormas.litros}`);
+    });
+
+    teste('profundidade mínima+máxima calcula a média', () => {
+      const media = profundidadeMediaMetros({ modo: 'minmax', unidade: 'm', minima: 1, maxima: 2 });
+      assert(aproxIgual(media, 1.5), `esperava 1.5, veio ${media}`);
+    });
+
+    teste('medidas inválidas retornam ok=false', () => {
+      const r = calcularLitragem({
+        formas: [{ tipo: 'retangular', unidade: 'm', comprimento: -1, largura: 2 }],
+        profundidade: { modo: 'unica', unidade: 'm', unica: 1.5 },
+      });
+      assert(r.ok === false, 'esperava ok=false para medida negativa');
+    });
+
+    // ---------- diagnostics.js ----------
+    teste('classificar: baixo, adequado e alto', () => {
+      assert(classificar(70, 80, 120) === 'baixo');
+      assert(classificar(100, 80, 120) === 'adequado');
+      assert(classificar(130, 80, 120) === 'alto');
+    });
+
+    teste('calcularDose converte ppm (mg/L) para kg corretamente', () => {
+      // 0,2 ppm em 100.000 L = 20.000 mg = 0,02 kg de princípio ativo; produto a 65% -> ÷0,65
+      const dose = calcularDose({ variacao: 0.2, volumeLitros: 100000, concentracaoPercentual: 65 });
+      assert(aproxIgual(dose, 0.03077, 0.0001), `esperava ~0,03077 kg, veio ${dose}`);
+    });
+
+    teste('calcularDose com produto a 100% de pureza', () => {
+      // 20 ppm em 100.000 L = 2.000.000 mg = 2 kg de princípio ativo puro
+      const dose = calcularDose({ variacao: 20, volumeLitros: 100000, concentracaoPercentual: 100 });
+      assert(aproxIgual(dose, 2), `esperava 2 kg, veio ${dose}`);
+    });
+
+    teste('calcularDose bate com a dosagem real pesquisada (ordem de grandeza) — 17g/1.000L eleva 10ppm de alcalinidade', () => {
+      const doseKg = calcularDose({ variacao: 10, volumeLitros: 1000, concentracaoPercentual: 99 });
+      // Não é esperado bater exato (pureza/eficiência real variam) — o que importa é estar na
+      // mesma ordem de grandeza da dosagem declarada (17g), não ~1.000x maior como antes da correção.
+      assert(doseKg > 0.005 && doseKg < 0.03, `esperava algo entre 5g e 30g, veio ${(doseKg * 1000).toFixed(1)}g`);
+    });
+
+    teste('quantidadeEmUnidadeDoProduto converte kg para L via densidade', () => {
+      const r = quantidadeEmUnidadeDoProduto(115, { estadoFisico: 'liquido', densidade: 1.15 });
+      assert(r.unidade === 'L');
+      assert(aproxIgual(r.valor, 100), `esperava 100, veio ${r.valor}`);
+    });
+
+    teste('quantidadeEmUnidadeDoProduto mantém kg para produto sólido', () => {
+      const r = quantidadeEmUnidadeDoProduto(50, { estadoFisico: 'solido' });
+      assert(r.unidade === 'kg' && aproxIgual(r.valor, 50));
+    });
+
+    teste('quantidadeEmUnidadeDoProduto sinaliza produto líquido sem densidade (não finge que é litro)', () => {
+      const r = quantidadeEmUnidadeDoProduto(90, { estadoFisico: 'liquido', densidade: null });
+      assert(r.unidade === 'kg', `esperava 'kg' sem densidade, veio '${r.unidade}'`);
+      assert(r.densidadeAusente === true, 'esperava densidadeAusente=true para avisar a interface');
+    });
+
+    teste('diagnosticar: exemplo da especificação (piscina 100.000L, pH 8.1, alcalinidade 170, cloro 0.4)', () => {
+      const passos = diagnosticar(
+        { alcalinidade: 170, ph: 8.1, cloro: 0.4 },
+        100000,
+        { alcalinidade: {}, ph: {}, cloro: {} }
+      );
+      assert(passos.length === 3, `esperava 3 passos, veio ${passos.length}`);
+      assert(passos[0].parametroId === 'alcalinidade', 'alcalinidade deve vir primeiro');
+      assert(passos[1].parametroId === 'ph', 'pH deve vir em segundo');
+      assert(passos[2].parametroId === 'cloro', 'cloro deve vir por último');
+      assert(passos[0].status === 'alto' && passos[0].direcao === 'descer');
+      assert(passos[1].status === 'alto' && passos[1].direcao === 'descer');
+      assert(passos[2].status === 'baixo' && passos[2].direcao === 'subir');
+    });
+
+    teste('diagnosticar: passo carrega o id do produto selecionado (para registrar consumo depois)', () => {
+      const produtoCloro = { id: 'prod-1', nomeComercial: 'Cloro Teste', concentracao: 65, estadoFisico: 'solido' };
+      const passos = diagnosticar(
+        { alcalinidade: 100, ph: 7.4, cloro: 0.2 },
+        50000,
+        { alcalinidade: {}, ph: {}, cloro: { subir: produtoCloro } }
+      );
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(passoCloro.produtoId === 'prod-1', `esperava produtoId 'prod-1', veio ${passoCloro.produtoId}`);
+    });
+
+    teste('diagnosticar: parâmetro dentro da faixa não sugere correção', () => {
+      const passos = diagnosticar({ alcalinidade: 100, ph: 7.4, cloro: 1.5 }, 50000, { alcalinidade: {}, ph: {}, cloro: {} });
+      passos.forEach((p) => assert(p.status === 'adequado', `${p.parametroId} deveria ser adequado`));
+    });
+
+    teste('diagnosticar: Dureza Cálcica e Ácido Cianúrico classificam e calculam dose normalmente', () => {
+      const produtoDureza = { id: 'dureza-1', nomeComercial: 'Dureza Teste', concentracao: 90, estadoFisico: 'solido' };
+      const produtoCya = { id: 'cya-1', nomeComercial: 'Estabilizante Teste', concentracao: 99, estadoFisico: 'solido' };
+      const passos = diagnosticar(
+        { dureza: 150, cianurico: 60 },
+        50000,
+        { dureza: { subir: produtoDureza }, cianurico: { descer: null } }
+      );
+      const passoDureza = passos.find((p) => p.parametroId === 'dureza');
+      const passoCya = passos.find((p) => p.parametroId === 'cianurico');
+      assert(passoDureza.status === 'baixo' && passoDureza.direcao === 'subir', 'dureza 150 deveria ser baixa e pedir subir');
+      assert(passoDureza.dose && passoDureza.dose.valor > 0, 'esperava dose calculada para dureza');
+      assert(passoCya.status === 'alto' && passoCya.direcao === 'descer', 'cianúrico 60 deveria ser alto e pedir descer');
+    });
+
+    teste('diagnosticar: Sal é ignorado em piscina de cloração manual', () => {
+      const passos = diagnosticar({ sal: 1000 }, 50000, {}, { sistemaDesinfeccao: 'manual' });
+      assert(passos.length === 0, `esperava 0 passos (sal não se aplica), veio ${passos.length}`);
+    });
+
+    teste('diagnosticar: Sal entra na sequência em piscina com gerador salino', () => {
+      const passos = diagnosticar({ sal: 1000 }, 50000, {}, { sistemaDesinfeccao: 'salino' });
+      assert(passos.length === 1 && passos[0].parametroId === 'sal', 'esperava o passo de sal');
+      assert(passos[0].status === 'baixo', 'sal 1000 deveria ser baixo (abaixo de 2.700 ppm)');
+      assert(/geração de cloro/i.test(passos[0].limitesSeguranca), 'esperava limitesSeguranca específico de sal baixo');
+    });
+
+    teste('diagnosticar: limitesSeguranca por objeto só aparece para o status cadastrado (Cianúrico baixo não tem aviso)', () => {
+      const passos = diagnosticar({ cianurico: 10 }, 50000, {});
+      const passo = passos.find((p) => p.parametroId === 'cianurico');
+      assert(passo.status === 'baixo', 'esperava cianúrico baixo (10ppm)');
+      assert(passo.limitesSeguranca === null, 'cianúrico baixo não tem limite de segurança cadastrado (só "alto")');
+    });
+
+    teste('diagnosticar: faixasCustom sobrescreve a faixa-alvo padrão (ex: Sal do fabricante do gerador)', () => {
+      const passos = diagnosticar(
+        { sal: 2000 },
+        50000,
+        {},
+        { sistemaDesinfeccao: 'salino', faixasCustom: { sal: { min: 1500, max: 2500 } } }
+      );
+      assert(passos[0].status === 'adequado', 'sal 2000 deveria ser adequado com a faixa customizada 1.500-2.500');
+    });
+
+    teste('diagnosticar: Cloro em piscina salina não sugere clorante manual, orienta o gerador', () => {
+      const passos = diagnosticar({ cloro: 0.2 }, 50000, {}, { sistemaDesinfeccao: 'salino' });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(passoCloro.semProduto === true, 'esperava semProduto=true para cloro em piscina salina');
+      assert(!passoCloro.produto, 'não deveria sugerir produto clorante em piscina salina');
+      assert(typeof passoCloro.instrucaoGeradorSalino === 'string' && passoCloro.instrucaoGeradorSalino.length > 0);
+    });
+
+    teste('diagnosticar: Cloro em piscina com gerador de ozônio continua sugerindo clorante, mas com aviso', () => {
+      const produtoCloro = { id: 'prod-cloro', nomeComercial: 'Cloro Teste', concentracao: 65, estadoFisico: 'solido' };
+      const passos = diagnosticar({ cloro: 0.2 }, 50000, { cloro: { subir: produtoCloro } }, { sistemaDesinfeccao: 'ozonio' });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(!passoCloro.semProduto, 'ozônio não deveria desativar a sugestão de clorante');
+      assert(passoCloro.produtoId === 'prod-cloro', 'esperava que o clorante cadastrado ainda fosse sugerido');
+      assert(passoCloro.avisos && passoCloro.avisos.length === 1, 'esperava um aviso sobre ozônio');
+    });
+
+    teste('diagnosticar: aviso de ozônio aparece mesmo quando o cloro está adequado', () => {
+      const passos = diagnosticar({ cloro: 1.5 }, 50000, {}, { sistemaDesinfeccao: 'ozonio' });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(passoCloro.status === 'adequado', 'esperava status adequado para 1.5 ppm');
+      assert(passoCloro.avisos && passoCloro.avisos.length === 1, 'aviso de ozônio deveria aparecer mesmo com cloro adequado');
+    });
+
+    teste('diagnosticar: piscina de cloração manual não recebe aviso de ozônio', () => {
+      const passos = diagnosticar({ cloro: 0.2 }, 50000, {}, { sistemaDesinfeccao: 'manual' });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(!passoCloro.avisos, 'não deveria haver aviso de ozônio para piscina manual');
+    });
+
+    teste('diagnosticar: limitesSeguranca aparece para Cloro fora da faixa (interditar o uso)', () => {
+      const passos = diagnosticar({ cloro: 0.2 }, 50000, {});
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(/interditar/i.test(passoCloro.limitesSeguranca), `esperava aviso de interdição, veio: ${passoCloro.limitesSeguranca}`);
+    });
+
+    teste('diagnosticar: limitesSeguranca não aparece quando o parâmetro está adequado', () => {
+      const passos = diagnosticar({ cloro: 1.5 }, 50000, {});
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(passoCloro.limitesSeguranca === undefined, 'não deveria haver limitesSeguranca para status adequado');
+    });
+
+    teste('diagnosticar: Cianúrico alto empurra a meta de Cloro para o topo da faixa e avisa', () => {
+      const produtoCloro = { id: 'prod-cloro-2', nomeComercial: 'Cloro Teste 2', concentracao: 65, estadoFisico: 'solido' };
+      const passos = diagnosticar({ cianurico: 80, cloro: 1.5 }, 50000, { cloro: { subir: produtoCloro } });
+      const passoCianurico = passos.find((p) => p.parametroId === 'cianurico');
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(passoCianurico.status === 'alto', 'esperava cianúrico alto (80ppm)');
+      assert(passoCloro.status === 'adequado', 'cloro 1,5 ainda é adequado pela faixa padrão');
+      assert(passoCloro.avisos && passoCloro.avisos.some((a) => /chlorine lock|cianúrico/i.test(a)), 'esperava aviso de chlorine lock no passo de cloro');
+    });
+
+    teste('diagnosticar: sem Cianúrico alto, meta de Cloro continua no padrão (1.5)', () => {
+      const produtoCloro = { id: 'prod-cloro-3', nomeComercial: 'Cloro Teste 3', concentracao: 65, estadoFisico: 'solido' };
+      const passos = diagnosticar({ cloro: 0.2 }, 50000, { cloro: { subir: produtoCloro } });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(aproxIgual(passoCloro.meta, 1.5), `esperava meta 1.5, veio ${passoCloro.meta}`);
+    });
+
+    teste('diagnosticar: Temperatura não tem produto e usa rótulos fria/quente', () => {
+      const passos = diagnosticar({ temperatura: 22 }, 50000, {});
+      const passoTemp = passos.find((p) => p.parametroId === 'temperatura');
+      assert(passoTemp.semProduto === true, 'temperatura não deveria ter produto/dose');
+      assert(passoTemp.rotuloStatus === 'fria', `esperava rótulo 'fria', veio '${passoTemp.rotuloStatus}'`);
+      assert(typeof passoTemp.instrucaoOperacional === 'string' && passoTemp.instrucaoOperacional.length > 0);
+    });
+
+    // ---------- chart.js ----------
+    teste('escalaAgradavel arredonda o teto para um número redondo acima do máximo', () => {
+      const r = escalaAgradavel(62);
+      assert(r.max >= 62, `teto ${r.max} deveria ser >= 62`);
+      assert(r.max % r.passo === 0 || aproxIgual(r.max % r.passo, 0), 'teto deveria ser múltiplo do passo');
+    });
+
+    teste('escalaAgradavel lida com valor máximo zero sem travar', () => {
+      const r = escalaAgradavel(0);
+      assert(r.max > 0, 'esperava um teto positivo mesmo sem dados');
+    });
+
+    teste('caminhoBarraArredondada não gera path para altura zero', () => {
+      assert(caminhoBarraArredondada(0, 0, 20, 0, 4) === '', 'altura zero deveria retornar path vazio');
+    });
+
+    document.getElementById('resumo').innerHTML =
+      falhas === 0
+        ? `<span class="ok">${total} testes, todos passaram ✅</span>`
+        : `<span class="fail">${falhas} de ${total} testes falharam ❌</span>`;
+  </script>
+</body>
+</html>
