@@ -318,8 +318,8 @@ function renderScreenClientes() {
     <div class="screen-header">
       <div><div class="kicker">${esc(hoje)}</div><h2>Clientes</h2></div>
       <div class="screen-header-actions">
-        <button type="button" class="btn btn-secondary btn-icon" data-action="ir-produtos" title="Produtos"><i class="ph ph-flask"></i></button>
-        <button type="button" class="btn btn-secondary btn-icon" data-action="ir-cadastro-cliente" title="Novo cliente"><i class="ph ph-plus"></i></button>
+        <button type="button" class="btn btn-secondary" data-action="ir-produtos" style="gap:6px"><i class="ph ph-flask"></i>Produtos</button>
+        <button type="button" class="btn btn-primary" data-action="ir-cadastro-cliente" style="gap:6px"><i class="ph ph-plus"></i>Novo cliente</button>
       </div>
     </div>
     <div class="client-grid">
@@ -669,6 +669,7 @@ function renderScreenResultado() {
     <div class="steps-list">
       ${fora.map((p, i) => renderResultStep(p, i)).join('')}
       ${adequados.length ? `<div class="divider-label"><span>${adequados.length} parâmetro(s) dentro da faixa: ${esc(adequados.map((p) => p.nome).join(', '))}</span><span class="rule"></span></div>` : ''}
+      ${(r.naoInformados || []).length ? `<div class="divider-label"><span>Não informado: ${esc(r.naoInformados.join(', '))}</span><span class="rule"></span></div>` : ''}
       ${passos.length === 0 ? `<p class="empty-note">Nenhuma leitura informada — volte e preencha ao menos um parâmetro.</p>` : ''}
     </div>
     ${semItens ? '' : r.checklistAberto ? `
@@ -756,6 +757,11 @@ function renderHistoryItem(h) {
   const fora = h.passos.filter((p) => p.status !== 'adequado').length;
   const resumo = h.passos.map((p) => p.nome + ' ' + numFmt(p.valor)).join(' · ');
   const aberto = !!state.histAbertos[h.id];
+  const sistemaDesinfeccao = pool && ['salino', 'ozonio'].includes(pool.sistemaDesinfeccao) ? pool.sistemaDesinfeccao : 'manual';
+  const naoInformados = PARAMETROS
+    .filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao)
+    .filter((p) => h.leituras[p.id] == null)
+    .map((p) => p.nome);
   return `
     <div class="history-item">
       <div class="history-top">
@@ -765,7 +771,7 @@ function renderHistoryItem(h) {
           <button type="button" class="btn btn-ghost" data-action="baixar-pdf-historico" data-id="${h.id}" style="font-size:12.5px"><i class="ph ph-file-pdf" style="font-size:16px"></i>PDF</button>
         </div>
       </div>
-      <p class="history-summary">${esc(resumo)}</p>
+      <p class="history-summary">${esc(resumo)}${naoInformados.length ? ' · Não informado: ' + esc(naoInformados.join(', ')) : ''}</p>
       <button type="button" class="btn btn-ghost" data-action="alternar-historico" data-id="${h.id}" style="font-size:12.5px;margin-top:8px">${aberto ? 'Ocultar passos' : 'Ver os passos'}</button>
       ${aberto ? `<div class="history-steps">${h.passos.map((p) => {
         const v = historyStepView(p);
@@ -1062,8 +1068,11 @@ const actions = {
     const checklist = passos
       .filter((p) => p.status !== 'adequado' && p.produtoId && p.dose)
       .map((p) => ({ on: true, qtd: p.dose.valor.toFixed(3), passo: p }));
+    // Parâmetros sem leitura não entram no cálculo (diagnosticar() já os ignora), mas
+    // continuam aparecendo no resultado como "não informado" em vez de somem sem explicação.
+    const naoInformados = parametrosAtivos.filter((p) => leituras[p.id] == null).map((p) => p.nome);
 
-    state.resultado = { poolId: pool.id, registro, passos, checklist, checklistAberto: false };
+    state.resultado = { poolId: pool.id, registro, passos, checklist, checklistAberto: false, naoInformados };
     state.screen = 'resultado';
   },
   'baixar-pdf-resultado': () => {

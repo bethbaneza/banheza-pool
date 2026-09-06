@@ -83,17 +83,17 @@ function gerarPdfDiagnostico(piscina, registro) {
   const l = registro.leituras;
   escrever('Leituras informadas', { tamanho: 12, negrito: true });
   // Nem todo diagnóstico preenche os mesmos parâmetros (o diagnóstico cruzado aceita qualquer
-  // subconjunto) — lista só os que têm leitura, em vez de assumir Alcalinidade/pH/Cloro fixos.
-  const leiturasTexto = [
-    l.alcalinidade != null && `Alcalinidade Total: ${l.alcalinidade} ppm`,
-    l.ph != null && `pH: ${l.ph}`,
-    l.cloro != null && `Cloro Livre: ${l.cloro} ppm`,
-    l.dureza != null && `Dureza Cálcica: ${l.dureza} ppm`,
-    l.cianurico != null && `Ácido Cianúrico: ${l.cianurico} ppm`,
-    l.sal != null && `Sal: ${l.sal} ppm`,
-    l.temperatura != null && `Temperatura: ${l.temperatura}°C`,
-  ].filter(Boolean);
-  escrever(leiturasTexto.length ? leiturasTexto.join('   |   ') : 'Nenhuma leitura informada.');
+  // subconjunto) — lista todos os parâmetros aplicáveis a esta piscina (PARAMETROS, de
+  // diagnostics.js), marcando explicitamente como "Não informado" quem não tem leitura, em vez
+  // de simplesmente omitir a linha (o que parecia um esquecimento no relatório final).
+  const sistemaDesinfeccao = ['salino', 'ozonio'].includes(piscina.sistemaDesinfeccao) ? piscina.sistemaDesinfeccao : 'manual';
+  const leiturasTexto = PARAMETROS
+    .filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao)
+    .map((p) => {
+      const v = l[p.id];
+      return v != null ? `${p.nome}: ${v}${p.unidade ? ' ' + p.unidade : ''}` : `${p.nome}: Não informado`;
+    });
+  escrever(leiturasTexto.join('   |   '));
   novaLinha(8);
 
   escrever('Diagnóstico', { tamanho: 12, negrito: true });
