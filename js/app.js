@@ -420,9 +420,9 @@ function renderShapeBlock(fo, i, f) {
   const diag = fo.tipo === 'circular' ? svgShapeCircular() : fo.tipo === 'oval' ? svgShapeOval() : svgShapeRetangular();
   const removivel = f.formato === 'composta' && f.formas.length > 1;
   const campos = fo.tipo === 'circular'
-    ? `<div class="field"><label>Diâmetro</label><input class="input" type="number" data-action="set-forma-campo" data-idx="${i}" data-campo="diametro" value="${esc(fo.diametro)}" /></div>`
-    : `<div class="field"><label>Comprimento</label><input class="input" type="number" data-action="set-forma-campo" data-idx="${i}" data-campo="comprimento" value="${esc(fo.comprimento)}" /></div>
-       <div class="field"><label>Largura</label><input class="input" type="number" data-action="set-forma-campo" data-idx="${i}" data-campo="largura" value="${esc(fo.largura)}" /></div>`;
+    ? `<div class="field"><label>Diâmetro</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="diametro" value="${esc(fo.diametro)}" /></div>`
+    : `<div class="field"><label>Comprimento</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="comprimento" value="${esc(fo.comprimento)}" /></div>
+       <div class="field"><label>Largura</label><input class="input" type="text" inputmode="decimal" data-action="set-forma-campo" data-idx="${i}" data-campo="largura" value="${esc(fo.largura)}" /></div>`;
   return `
     <div class="shape-block">
       <div class="shape-diagrama">${diag}</div>
@@ -465,8 +465,8 @@ function renderScreenCadastroPiscina() {
         </div>
         ${f.sistema === 'salino' ? `
         <div style="display:flex;gap:10px">
-          <div class="field" style="flex:1"><label>Sal mín. do gerador (ppm)</label><input class="input" type="number" placeholder="2700" data-action="set-sal-min" value="${esc(f.salMin)}" /></div>
-          <div class="field" style="flex:1"><label>Sal máx. do gerador (ppm)</label><input class="input" type="number" placeholder="3400" data-action="set-sal-max" value="${esc(f.salMax)}" /></div>
+          <div class="field" style="flex:1"><label>Sal mín. do gerador (ppm)</label><input class="input" type="text" inputmode="decimal" placeholder="2700" data-action="set-sal-min" value="${esc(f.salMin)}" /></div>
+          <div class="field" style="flex:1"><label>Sal máx. do gerador (ppm)</label><input class="input" type="text" inputmode="decimal" placeholder="3400" data-action="set-sal-max" value="${esc(f.salMax)}" /></div>
         </div>` : ''}
         <div class="field"><label>Unidade de medida</label>
           <span class="seg">
@@ -484,8 +484,8 @@ function renderScreenCadastroPiscina() {
             <label class="radio"><input type="radio" name="prof" data-action="set-modo-prof" data-tipo="minmax" ${f.modoProf === 'minmax' ? 'checked' : ''} /><span class="dot"></span>Mínima e máxima (fundo inclinado)</label>
           </div>
           ${f.modoProf === 'unica'
-            ? `<input class="input" type="number" placeholder="Profundidade" data-action="set-prof" value="${esc(f.prof)}" style="margin-top:9px" />`
-            : `<div style="display:flex;gap:9px;margin-top:9px"><input class="input" type="number" placeholder="Mínima" data-action="set-prof-min" value="${esc(f.profMin)}" /><input class="input" type="number" placeholder="Máxima" data-action="set-prof-max" value="${esc(f.profMax)}" /></div>`}
+            ? `<input class="input" type="text" inputmode="decimal" placeholder="Profundidade" data-action="set-prof" value="${esc(f.prof)}" style="margin-top:9px" />`
+            : `<div style="display:flex;gap:9px;margin-top:9px"><input class="input" type="text" inputmode="decimal" placeholder="Mínima" data-action="set-prof-min" value="${esc(f.profMin)}" /><input class="input" type="text" inputmode="decimal" placeholder="Máxima" data-action="set-prof-max" value="${esc(f.profMax)}" /></div>`}
         </div>
         <div class="field"><label>Formato</label>
           <select class="input" data-action="set-formato">
@@ -495,7 +495,7 @@ function renderScreenCadastroPiscina() {
         ${f.formato === 'irregular' ? `
         <div>
           <p style="margin:0 0 9px;font-size:11.5px;line-height:1.5;color:rgba(233,233,237,.55)">Meça o nível, adicione um volume conhecido de água, meça de novo e calcule o total pela variação de nível. Informe o resultado aqui.</p>
-          <div class="field"><label>Litragem estimada (L)</label><input class="input" type="number" data-action="set-litros-manuais" value="${esc(f.litrosManuais)}" /></div>
+          <div class="field"><label>Litragem estimada (L)</label><input class="input" type="text" inputmode="decimal" data-action="set-litros-manuais" value="${esc(f.litrosManuais)}" /></div>
         </div>` : `
         <div style="display:flex;flex-direction:column;gap:10px">
           ${f.formas.map((fo, i) => renderShapeBlock(fo, i, f)).join('')}
@@ -533,7 +533,7 @@ function renderReadingCards(pool, parametrosAtivos) {
       <div class="reading-card">
         <div class="reading-top">
           <div><div class="reading-name">${esc(par.nome)}</div><div class="reading-range">faixa ${numFmt(faixa.min)}–${numFmt(faixa.max)}${par.unidade ? ' ' + esc(par.unidade) : ''}</div></div>
-          <input class="input reading-input" type="number" placeholder="—" data-action="set-leitura" data-param="${par.id}" value="${raw == null ? '' : esc(raw)}" style="color:${cor}" />
+          <input class="input reading-input" type="text" inputmode="decimal" placeholder="—" data-action="set-leitura" data-param="${par.id}" value="${raw == null ? '' : esc(raw)}" style="color:${cor}" />
         </div>
         <div class="reading-track">
           <div class="reading-fill" style="left:${left}%;width:${right - left}%"></div>
@@ -679,7 +679,7 @@ function renderScreenResultado() {
         <div class="checklist-row">
           <label class="radio"><input type="checkbox" data-action="toggle-checklist-item" data-idx="${i}" ${c.on ? 'checked' : ''} /><span class="dot"></span></label>
           <span class="checklist-label">${esc(c.passo.produto)} (${esc(c.passo.nome)})</span>
-          <input class="input" type="number" data-action="set-checklist-qtd" data-idx="${i}" value="${esc(c.qtd)}" />
+          <input class="input" type="text" inputmode="decimal" data-action="set-checklist-qtd" data-idx="${i}" value="${esc(c.qtd)}" />
           <span class="checklist-unit">${esc(c.passo.dose.unidade)}</span>
         </div>`).join('')}
       <button type="button" class="btn btn-primary btn-block" data-action="registrar-consumos" style="min-height:46px;margin-top:14px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Registrando…' : 'Registrar produtos aplicados'}</button>
@@ -735,8 +735,8 @@ function renderScreenSal() {
       </div>
       ${avisoSistema ? `<p class="notice-flat">Esta piscina está cadastrada com ${pool.sistemaDesinfeccao === 'ozonio' ? 'gerador de ozônio' : 'cloração manual'} — a calculadora parte do princípio de que existe um gerador salino instalado.</p>` : ''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px">
-        <div class="field"><label>Sal medido agora (ppm)</label><input class="input" type="number" data-action="set-sal-atual" value="${esc(state.salAtual)}" style="font-size:17px" /></div>
-        <div class="field"><label>Sal ideal desejado (ppm)</label><input class="input" type="number" data-action="set-sal-meta" value="${esc(state.salMeta)}" style="font-size:17px" /></div>
+        <div class="field"><label>Sal medido agora (ppm)</label><input class="input" type="text" inputmode="decimal" data-action="set-sal-atual" value="${esc(state.salAtual)}" style="font-size:17px" /></div>
+        <div class="field"><label>Sal ideal desejado (ppm)</label><input class="input" type="text" inputmode="decimal" data-action="set-sal-meta" value="${esc(state.salMeta)}" style="font-size:17px" /></div>
         <div class="field"><label>Produto de sal</label>
           <select class="input" data-action="set-sal-produto">
             ${opcoesSal.map((o) => `<option value="${o.id}" ${state.salProdutoId === o.id ? 'selected' : ''}>${esc(o.nomeComercial)} (${pctFmt(o.concentracao)})</option>`).join('')}
@@ -883,15 +883,15 @@ function renderScreenProdutos() {
       <div class="field"><label>Nome comercial</label><input class="input" type="text" placeholder="Ex: Barrilha Leve Montreal" data-action="set-np-nome" value="${esc(np.nome)}" /></div>
       <div class="field"><label>Fabricante / marca</label><input class="input" type="text" placeholder="Ex: Montreal" data-action="set-np-marca" value="${esc(np.marca)}" /></div>
       <div class="field"><label>Princípio ativo</label><input class="input" type="text" data-action="set-np-principio" value="${esc(np.principio)}" /></div>
-      <div class="field"><label>Concentração / pureza (%)</label><input class="input" type="number" data-action="set-np-concentracao" value="${esc(np.concentracao)}" /></div>
-      <div class="field"><label>Preço por ${np.estado === 'liquido' ? 'L' : 'kg'} (R$) — opcional</label><input class="input" type="number" placeholder="12,50" data-action="set-np-preco" value="${esc(np.preco)}" /></div>
+      <div class="field"><label>Concentração / pureza (%)</label><input class="input" type="text" inputmode="decimal" data-action="set-np-concentracao" value="${esc(np.concentracao)}" /></div>
+      <div class="field"><label>Preço por ${np.estado === 'liquido' ? 'L' : 'kg'} (R$) — opcional</label><input class="input" type="text" inputmode="decimal" placeholder="12,50" data-action="set-np-preco" value="${esc(np.preco)}" /></div>
       <div class="field"><label>Estado físico</label>
         <span class="seg">
           <label class="seg-opt"><input type="radio" name="estado" data-action="set-np-estado" data-tipo="solido" ${np.estado === 'solido' ? 'checked' : ''} />Sólido</label>
           <label class="seg-opt"><input type="radio" name="estado" data-action="set-np-estado" data-tipo="liquido" ${np.estado === 'liquido' ? 'checked' : ''} />Líquido</label>
         </span>
       </div>
-      ${np.estado === 'liquido' ? `<div class="field"><label>Densidade (kg/L)</label><input class="input" type="number" data-action="set-np-densidade" value="${esc(np.densidade)}" /></div>` : ''}
+      ${np.estado === 'liquido' ? `<div class="field"><label>Densidade (kg/L)</label><input class="input" type="text" inputmode="decimal" data-action="set-np-densidade" value="${esc(np.densidade)}" /></div>` : ''}
       ${template && template.aviso ? `<p class="notice-flat span-all">${esc(template.aviso)}</p>` : ''}
       <div class="span-all" style="display:flex;gap:9px">
         <button type="button" class="btn btn-primary" data-action="salvar-produto" style="min-height:46px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? 'Salvando…' : 'Salvar produto'}</button>
@@ -1318,6 +1318,18 @@ document.addEventListener('input', (e) => {
   const el = e.target;
   if (!(el instanceof HTMLElement) || !el.dataset.action) return;
   if ((el.tagName === 'INPUT' && ['text', 'number', 'date', 'password'].includes(el.type)) || el.tagName === 'TEXTAREA') {
+    // Campos numéricos usam type="text" + inputmode="decimal" (não type="number") de propósito:
+    // isso mantém o teclado numérico no celular, mas devolve o controle total do cursor, que o
+    // navegador não permite em inputs type="number" — sem isso, cada re-renderização (a cada
+    // tecla, para o preview da litragem/faixas atualizar ao vivo) empurrava o cursor pro início
+    // do campo, invertendo a ordem dos dígitos digitados. Quem digita vírgula como separador
+    // decimal (hábito daqui) precisa continuar calculando certo — normaliza para ponto aqui,
+    // antes de qualquer ação ler o valor do campo.
+    if (el.getAttribute('inputmode') === 'decimal' && el.value.indexOf(',') >= 0) {
+      const pos = el.selectionStart;
+      el.value = el.value.replace(',', '.');
+      try { el.setSelectionRange(pos, pos); } catch (err) { /* ignora se o navegador não permitir */ }
+    }
     dispatch(el.dataset.action, el);
   }
 });
