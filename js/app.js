@@ -702,7 +702,6 @@ function renderScreenSal() {
   if (!state.salPoolId || !pools.some((p) => p.id === state.salPoolId)) state.salPoolId = pools[0].id;
   const pool = piscinaPorId(state.salPoolId);
   const faixa = faixaSalDe(pool);
-  if (!state.salMeta) state.salMeta = String(Math.round((faixa.min + faixa.max) / 2));
   const produtos = state.produtos;
   const opcoesSal = produtosDe(produtos, ['Sal para Piscina']);
   if ((!state.salProdutoId || !opcoesSal.some((o) => o.id === state.salProdutoId)) && opcoesSal.length) state.salProdutoId = opcoesSal[0].id;
@@ -737,7 +736,7 @@ function renderScreenSal() {
       ${avisoSistema ? `<p class="notice-flat">Esta piscina está cadastrada com ${pool.sistemaDesinfeccao === 'ozonio' ? 'gerador de ozônio' : 'cloração manual'} — a calculadora parte do princípio de que existe um gerador salino instalado.</p>` : ''}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px">
         <div class="field"><label>Sal medido agora (ppm)</label><input class="input" type="text" inputmode="decimal" data-action="set-sal-atual" value="${esc(state.salAtual)}" style="font-size:17px" /></div>
-        <div class="field"><label>Sal ideal desejado (ppm)</label><input class="input" type="text" inputmode="decimal" data-action="set-sal-meta" value="${esc(state.salMeta)}" style="font-size:17px" /></div>
+        <div class="field"><label>Sal ideal desejado (ppm)</label><input class="input" type="text" inputmode="decimal" placeholder="Ex: ${numFmt(faixa.min)}–${numFmt(faixa.max)}" data-action="set-sal-meta" value="${esc(state.salMeta)}" style="font-size:17px" /></div>
         <div class="field"><label>Produto de sal</label>
           <select class="input" data-action="set-sal-produto">
             ${opcoesSal.map((o) => `<option value="${o.id}" ${state.salProdutoId === o.id ? 'selected' : ''}>${esc(o.nomeComercial)} (${pctFmt(o.concentracao)})</option>`).join('')}
@@ -1113,8 +1112,6 @@ const actions = {
   // sal
   'set-sal-pool': (el) => {
     state.salPoolId = el.value;
-    const fx = faixaSalDe(piscinaPorId(el.value));
-    state.salMeta = String(Math.round((fx.min + fx.max) / 2));
     state.salResultado = null;
   },
   'set-sal-atual': (el) => { state.salAtual = el.value; state.salResultado = null; },
@@ -1122,12 +1119,16 @@ const actions = {
   'set-sal-produto': (el) => { state.salProdutoId = el.value; state.salResultado = null; },
   'calcular-sal': () => {
     const pool = piscinaPorId(state.salPoolId);
-    const atual = Number(state.salAtual);
-    const faixa = faixaSalDe(pool);
-    const meta = Number(state.salMeta) || Math.round((faixa.min + faixa.max) / 2);
+    // Number('') === 0, que passaria como "válido" no isFinite — checa a string vazia à parte,
+    // senão deixar os campos em branco calculava com 0 em vez de pedir pra informar o valor.
+    const atualStr = state.salAtual.trim();
+    const metaStr = state.salMeta.trim();
+    const atual = Number(atualStr);
+    const meta = Number(metaStr);
     const produtos = state.produtos;
     const produto = produtos.find((p) => p.id === state.salProdutoId) || produtosDe(produtos, ['Sal para Piscina'])[0] || null;
-    if (!pool || !produto || !Number.isFinite(atual)) { toast('Informe o sal medido e escolha a piscina.'); return; }
+    if (!pool || !produto || atualStr === '' || !Number.isFinite(atual)) { toast('Informe o sal medido e escolha a piscina.'); return; }
+    if (metaStr === '' || !Number.isFinite(meta)) { toast('Informe o sal ideal desejado.'); return; }
     if (meta <= atual) { toast('A meta já foi atingida — não é necessário adicionar sal.'); return; }
     const kg = calcularDose({ variacao: meta - atual, volumeLitros: pool.litros, concentracaoPercentual: produto.concentracao });
     if (kg == null) { toast('Não foi possível calcular — confira a concentração cadastrada do produto.'); return; }
