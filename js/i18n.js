@@ -253,6 +253,8 @@ const TRADUCOES = {
     // ── histórico ────────────────────────────────────────────────────────────
     'historico.kicker': 'Relatórios salvos',
     'historico.titulo': 'Histórico',
+    'historico.abaVisitas': 'Visitas',
+    'historico.abaEvolucao': 'Evolução',
     'historico.piscina': 'Piscina',
     'historico.filtrarData': 'Filtrar por data',
     'historico.nenhumRelatorio': 'Nenhum relatório encontrado para essa busca.',
@@ -370,6 +372,19 @@ const TRADUCOES = {
     'semProduto.cianurico': 'Não existe produto para baixar o ácido cianúrico — a correção é por diluição: renovar parte da água da piscina, ou aguardar a degradação natural.',
     'semProduto.sal': 'Não existe produto para baixar o sal — diluir com reposição de água doce (retrolavagem do filtro ou troca parcial).',
     'semProduto.cloro': 'Não existe produto para baixar o cloro livre — aguardar a degradação natural (sol e circulação) ou diluir com reposição de água.',
+
+    // ── evolução (histórico → aba Evolução) ───────────────────────────────────
+    'evolucao.periodo': 'Período',
+    'evolucao.periodo.30': 'Últimos 30 dias',
+    'evolucao.periodo.90': 'Últimos 90 dias',
+    'evolucao.periodo.180': 'Últimos 6 meses',
+    'evolucao.periodo.365': 'Último ano',
+    'evolucao.periodo.todos': 'Tudo',
+    'evolucao.estavel': 'Estável',
+    'evolucao.melhorando': 'Melhorando',
+    'evolucao.recorrente': 'Recorrente',
+    'evolucao.dentroDeTotal': '{dentro} de {total} dentro da faixa',
+    'evolucao.semDados': 'Nenhuma medição registrada para essa piscina no período selecionado.',
 
     // ── PDF ──────────────────────────────────────────────────────────────────
     'pdf.erroCarregar': 'Não foi possível carregar o gerador de PDF. Verifique sua conexão com a internet e tente novamente.',
@@ -602,6 +617,8 @@ const TRADUCOES = {
 
     'historico.kicker': 'Saved reports',
     'historico.titulo': 'History',
+    'historico.abaVisitas': 'Visits',
+    'historico.abaEvolucao': 'Evolution',
     'historico.piscina': 'Pool',
     'historico.filtrarData': 'Filter by date',
     'historico.nenhumRelatorio': 'No report found for this search.',
@@ -716,6 +733,18 @@ const TRADUCOES = {
     'semProduto.cianurico': 'There is no product to lower cyanuric acid — the correction is by dilution: replace part of the pool water, or wait for natural degradation.',
     'semProduto.sal': 'There is no product to lower salt — dilute with a fresh water refill (filter backwash or partial water change).',
     'semProduto.cloro': 'There is no product to lower free chlorine — wait for natural degradation (sun and circulation) or dilute with a water refill.',
+
+    'evolucao.periodo': 'Period',
+    'evolucao.periodo.30': 'Last 30 days',
+    'evolucao.periodo.90': 'Last 90 days',
+    'evolucao.periodo.180': 'Last 6 months',
+    'evolucao.periodo.365': 'Last year',
+    'evolucao.periodo.todos': 'All time',
+    'evolucao.estavel': 'Stable',
+    'evolucao.melhorando': 'Improving',
+    'evolucao.recorrente': 'Recurring',
+    'evolucao.dentroDeTotal': '{dentro} of {total} within range',
+    'evolucao.semDados': 'No measurement recorded for this pool in the selected period.',
 
     'pdf.erroCarregar': 'Could not load the PDF generator. Check your internet connection and try again.',
     'pdf.tituloRelatorio': 'Diagnosis Report — Banheza Pool',
@@ -947,6 +976,8 @@ const TRADUCOES = {
 
     'historico.kicker': 'Informes guardados',
     'historico.titulo': 'Historial',
+    'historico.abaVisitas': 'Visitas',
+    'historico.abaEvolucao': 'Evolución',
     'historico.piscina': 'Piscina',
     'historico.filtrarData': 'Filtrar por fecha',
     'historico.nenhumRelatorio': 'No se encontró ningún informe para esta búsqueda.',
@@ -1061,6 +1092,18 @@ const TRADUCOES = {
     'semProduto.cianurico': 'No existe producto para bajar el ácido cianúrico — la corrección es por dilución: renovar parte del agua de la piscina, o esperar la degradación natural.',
     'semProduto.sal': 'No existe producto para bajar la sal — diluir con reposición de agua dulce (retrolavado del filtro o cambio parcial).',
     'semProduto.cloro': 'No existe producto para bajar el cloro libre — esperar la degradación natural (sol y circulación) o diluir con reposición de agua.',
+
+    'evolucao.periodo': 'Período',
+    'evolucao.periodo.30': 'Últimos 30 días',
+    'evolucao.periodo.90': 'Últimos 90 días',
+    'evolucao.periodo.180': 'Últimos 6 meses',
+    'evolucao.periodo.365': 'Último año',
+    'evolucao.periodo.todos': 'Todo',
+    'evolucao.estavel': 'Estable',
+    'evolucao.melhorando': 'Mejorando',
+    'evolucao.recorrente': 'Recurrente',
+    'evolucao.dentroDeTotal': '{dentro} de {total} dentro del rango',
+    'evolucao.semDados': 'No hay ninguna medición registrada para esta piscina en el período seleccionado.',
 
     'pdf.erroCarregar': 'No se pudo cargar el generador de PDF. Verifique su conexión a internet e intente de nuevo.',
     'pdf.tituloRelatorio': 'Informe de Diagnóstico — Banheza Pool',
