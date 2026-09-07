@@ -247,20 +247,23 @@ function diasDesde(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
-// Resume o estado de uma piscina pro Painel: 'acao' (cloro fora da faixa — risco sanitário
-// imediato), 'atencao' (algum outro parâmetro fora da faixa, ou medição atrasada) ou 'normal'.
-// Nunca medida entra em 'atencao' (precisa de uma primeira medição), não em 'acao' — não é uma
-// emergência, só falta dado.
+// Resume o estado de uma piscina pro Painel em 4 níveis, no mesmo vocabulário da seção de
+// Alertas do plano: 'critico' (cloro fora da faixa — risco sanitário imediato, ação
+// prioritária), 'atencao' (outro parâmetro fora da faixa), 'pendente' (medição atrasada ou
+// nunca feita — falta dado, não é uma emergência de água) e 'normal'. Uma piscina com cloro
+// fora da faixa E atrasada entra em 'critico' (o mais grave decide); fora-da-faixa (não-cloro)
+// tem prioridade sobre atrasada pelo mesmo motivo.
 function statusPiscina(pool) {
   const ult = ultimoDiagnosticoDe(pool.id);
-  if (!ult) return { nivel: 'atencao', semMedicao: true, ult: null, dias: null, atrasada: true, foraCount: 0 };
+  if (!ult) return { nivel: 'pendente', semMedicao: true, ult: null, dias: null, atrasada: true, foraCount: 0 };
   const dias = diasDesde(ult.data);
   const atrasada = dias > DIAS_PARA_MEDICAO_ATRASADA;
   const fora = ult.passos.filter((p) => p.status !== 'adequado');
   const cloroFora = fora.some((p) => p.parametroId === 'cloro');
   let nivel = 'normal';
-  if (cloroFora) nivel = 'acao';
-  else if (fora.length > 0 || atrasada) nivel = 'atencao';
+  if (cloroFora) nivel = 'critico';
+  else if (fora.length > 0) nivel = 'atencao';
+  else if (atrasada) nivel = 'pendente';
   return { nivel, semMedicao: false, ult, dias, atrasada, foraCount: fora.length };
 }
 
@@ -370,13 +373,15 @@ function renderAuthScreen() {
 function renderPainelPoolRow(pool, status) {
   const cliente = clientePorId(pool.clienteId);
   const label = cliente ? cliente.nome + ' — ' + pool.nome : pool.nome;
-  const tagLabel = status.semMedicao ? t('painel.nuncaMedida') : status.nivel === 'acao' ? t('poolCard.acao') : t('painel.atencao');
-  // "Ação" usa selo cheio (mais chamativo) — "Em atenção" e "Nunca medida" ficam com contorno
-  // fino, pra diferença de urgência aparecer mesmo com warn-400 e color-warm sendo tons de
-  // laranja parecidos (poderiam se confundir lado a lado se ambos fossem só contorno).
-  const tagStyle = status.nivel === 'acao'
+  const tagLabel = status.semMedicao ? t('painel.nuncaMedida') : t('painel.' + status.nivel);
+  // "Crítico" usa selo cheio (mais chamativo); "Atenção" contorno laranja; "Pendente" (ou
+  // "nunca medida") um contorno neutro — a urgência precisa dar pra distinguir de relance
+  // mesmo com warn-400 e color-warm sendo tons de laranja parecidos entre si.
+  const tagStyle = status.nivel === 'critico'
     ? 'background:var(--warn-400);color:var(--color-bg)'
-    : 'border:1px solid var(--color-warm);color:var(--color-warm)';
+    : status.nivel === 'atencao'
+    ? 'border:1px solid var(--color-warm);color:var(--color-warm)'
+    : 'border:1px solid rgba(var(--color-text-rgb),.35);color:rgba(var(--color-text-rgb),.65)';
   const detalhes = [];
   if (!status.semMedicao) {
     if (status.foraCount > 0) detalhes.push(t('historico.foraDaFaixa', { n: status.foraCount }));
@@ -398,17 +403,33 @@ function renderPainelPoolRow(pool, status) {
     </div>`;
 }
 
+// Alertas informativos: lembretes/recomendações gerais, não ligados a uma piscina específica
+// (diferente de Crítico/Atenção/Pendente, que são sempre sobre o estado de uma piscina). Por
+// enquanto só um, baseado em dado real (produtos sem preço deixam o relatório de Custos
+// incompleto) — nada inventado, só o que dá pra derivar do catálogo que a pessoa já cadastrou.
+function alertasInformativos() {
+  const alertas = [];
+  const semPreco = state.produtos.filter((p) => !p.preco).length;
+  if (semPreco > 0) {
+    alertas.push({ texto: t('painel.produtosSemPreco', { n: semPreco }), acao: 'ir-produtos' });
+  }
+  return alertas;
+}
+
+const PRIORIDADE_NIVEL = { critico: 0, atencao: 1, pendente: 2 };
+
 function renderScreenPainel() {
   const piscinasComStatus = state.piscinas.map((pool) => ({ pool, status: statusPiscina(pool) }));
-  const counts = { normal: 0, atencao: 0, acao: 0 };
+  const counts = { normal: 0, atencao: 0, pendente: 0, critico: 0 };
   piscinasComStatus.forEach(({ status }) => { counts[status.nivel]++; });
   const precisamAtencao = piscinasComStatus
     .filter(({ status }) => status.nivel !== 'normal')
     .sort((a, b) => {
-      if (a.status.nivel !== b.status.nivel) return a.status.nivel === 'acao' ? -1 : 1;
+      if (a.status.nivel !== b.status.nivel) return PRIORIDADE_NIVEL[a.status.nivel] - PRIORIDADE_NIVEL[b.status.nivel];
       return (b.status.dias ?? 0) - (a.status.dias ?? 0);
     });
   const ultimasMedicoes = state.historico.slice().sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 5);
+  const informativos = alertasInformativos();
 
   if (!state.clientes.length) {
     return `
@@ -418,11 +439,20 @@ function renderScreenPainel() {
 
   return `
     <div class="screen-header"><div><div class="kicker">${esc(t('painel.kicker'))}</div><h2>${esc(t('painel.titulo'))}</h2></div></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px">
       <div class="card stat-tile"><div class="stat-tile-value">${counts.normal}</div><div class="stat-tile-label">${esc(t('painel.normal'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 rgba(var(--color-text-rgb),.35), var(--shadow-sm)"><div class="stat-tile-value">${counts.pendente}</div><div class="stat-tile-label">${esc(t('painel.pendente'))}</div></div>
       <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--color-warm), var(--shadow-sm)"><div class="stat-tile-value">${counts.atencao}</div><div class="stat-tile-label">${esc(t('painel.atencao'))}</div></div>
-      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--warn-400), var(--shadow-sm)"><div class="stat-tile-value">${counts.acao}</div><div class="stat-tile-label">${esc(t('painel.acao'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--warn-400), var(--shadow-sm)"><div class="stat-tile-value">${counts.critico}</div><div class="stat-tile-label">${esc(t('painel.critico'))}</div></div>
     </div>
+
+    ${informativos.length ? `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      ${informativos.map((a) => `
+        <button type="button" class="notice-flat" style="text-align:left;border:none;font-family:inherit;cursor:pointer;width:100%" data-action="${a.acao}">
+          <i class="ph ph-info" style="margin-right:6px"></i>${esc(a.texto)}
+        </button>`).join('')}
+    </div>` : ''}
 
     <div class="divider-label"><span>${esc(t('painel.precisaAtencao'))}</span><span class="rule"></span></div>
     <div style="display:flex;flex-direction:column;gap:11px;margin-bottom:22px">
