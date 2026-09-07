@@ -463,6 +463,12 @@ select.input { appearance: none; }
 }
 .account-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
 
+/* ── painel ──────────────────────────────────────────────────────────────── */
+.stat-tile { text-align: center; padding: 16px 10px; }
+.stat-tile-value { font-size: 28px; font-weight: 500; letter-spacing: -.02em; }
+.stat-tile-label { margin-top: 3px; font-size: 11px; letter-spacing: .04em; color: rgba(var(--color-text-rgb),.55); }
+.painel-row { display: flex; flex-direction: column; }
+
 /* ── clientes ────────────────────────────────────────────────────────────── */
 .client-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
 .client-card { display: flex; flex-direction: column; gap: 11px; cursor: pointer; text-align: left; border: none; font-family: inherit; }
