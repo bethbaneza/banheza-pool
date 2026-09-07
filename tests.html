@@ -305,6 +305,70 @@
       assert(caminhoBarraArredondada(0, 0, 20, 0, 4) === '', 'altura zero deveria retornar path vazio');
     });
 
+    teste('pontosEvolucao ignora registros sem leitura do parâmetro e classifica dentro/fora', () => {
+      const registros = [
+        { data: '2026-01-01T00:00:00Z', leituras: { ph: 7.4 } },
+        { data: '2026-01-05T00:00:00Z', leituras: { alcalinidade: 100 } },
+        { data: '2026-01-10T00:00:00Z', leituras: { ph: 8.2 } },
+      ];
+      const pontos = pontosEvolucao(registros, 'ph', { min: 7.2, max: 7.6 });
+      assert(pontos.length === 2, `esperava 2 pontos de pH (ignorando o registro sem leitura de pH), veio ${pontos.length}`);
+      assert(pontos[0].dentro === true, 'primeira leitura de pH (7.4) deveria estar dentro da faixa');
+      assert(pontos[1].dentro === false, 'segunda leitura de pH (8.2) deveria estar fora da faixa');
+    });
+
+    teste('resumoEvolucao: sem nenhuma leitura fora da faixa, tendência é "estável"', () => {
+      const pontos = pontosEvolucao(
+        [{ data: '2026-01-01', leituras: { ph: 7.3 } }, { data: '2026-01-08', leituras: { ph: 7.5 } }],
+        'ph', { min: 7.2, max: 7.6 }
+      );
+      const r = resumoEvolucao(pontos);
+      assert(r.fora === 0 && r.tendencia === 'estavel', `esperava tendência estável sem leituras fora, veio ${r.tendencia}`);
+    });
+
+    teste('resumoEvolucao: proporção de fora-da-faixa caindo na segunda metade => "melhorando"', () => {
+      const registros = [
+        { data: '2026-01-01', leituras: { ph: 8.2 } }, // fora
+        { data: '2026-01-05', leituras: { ph: 8.1 } }, // fora
+        { data: '2026-01-10', leituras: { ph: 7.4 } }, // dentro
+        { data: '2026-01-15', leituras: { ph: 7.5 } }, // dentro
+      ];
+      const pontos = pontosEvolucao(registros, 'ph', { min: 7.2, max: 7.6 });
+      const r = resumoEvolucao(pontos);
+      assert(r.tendencia === 'melhorando', `esperava "melhorando" (fora caiu de 100% pra 0%), veio ${r.tendencia}`);
+    });
+
+    teste('resumoEvolucao: fora-da-faixa se repetindo (não melhora) => "recorrente"', () => {
+      const registros = [
+        { data: '2026-01-01', leituras: { cloro: 0.2 } }, // fora
+        { data: '2026-01-05', leituras: { cloro: 1.5 } }, // dentro
+        { data: '2026-01-10', leituras: { cloro: 0.1 } }, // fora
+        { data: '2026-01-15', leituras: { cloro: 0.3 } }, // fora
+      ];
+      const pontos = pontosEvolucao(registros, 'cloro', { min: 0.5, max: 3 });
+      const r = resumoEvolucao(pontos);
+      assert(r.tendencia === 'recorrente', `esperava "recorrente" (fora não caiu na 2a metade), veio ${r.tendencia}`);
+    });
+
+    teste('svgGraficoLinha gera um <svg> com um ponto por leitura', () => {
+      const pontos = pontosEvolucao(
+        [{ data: '2026-01-01', leituras: { ph: 7.3 } }, { data: '2026-01-08', leituras: { ph: 8.1 } }],
+        'ph', { min: 7.2, max: 7.6 }
+      );
+      const svg = svgGraficoLinha(pontos, { min: 7.2, max: 7.6 }, (v) => v.toFixed(1));
+      assert(svg.startsWith('<svg'), 'esperava uma string começando com <svg');
+      const numCirculos = (svg.match(/<circle/g) || []).length;
+      assert(numCirculos === 2, `esperava 2 <circle> (um por leitura), veio ${numCirculos}`);
+      assert(svg.includes('<polyline'), 'esperava uma <polyline> ligando os pontos (mais de 1 leitura)');
+    });
+
+    teste('svgGraficoLinha não quebra com uma única leitura (sem polyline, com linha pontilhada)', () => {
+      const pontos = pontosEvolucao([{ data: '2026-01-01', leituras: { ph: 7.3 } }], 'ph', { min: 7.2, max: 7.6 });
+      const svg = svgGraficoLinha(pontos, { min: 7.2, max: 7.6 }, (v) => v.toFixed(1));
+      assert(!svg.includes('<polyline'), 'com 1 ponto só não deveria ter polyline');
+      assert((svg.match(/<circle/g) || []).length === 1, 'esperava 1 <circle>');
+    });
+
     document.getElementById('resumo').innerHTML =
       falhas === 0
         ? `<span class="ok">${total} testes, todos passaram ✅</span>`

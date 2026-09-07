@@ -2,7 +2,7 @@
 // offline. Dados (Supabase) e dependências externas (fontes, ícones, jsPDF, supabase-js)
 // seguem sempre direto pela rede — não fazem sentido em cache, e o app já avisa quando não
 // consegue falar com o servidor.
-const CACHE_NAME = 'banheza-pool-v2';
+const CACHE_NAME = 'banheza-pool-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './js/volume.js',
   './js/products-data.js',
   './js/diagnostics.js',
+  './js/chart.js',
   './js/i18n.js',
   './js/db.js',
   './js/pdf.js',

@@ -148,7 +148,8 @@ function estadoInicial() {
     formCliente: null, formPiscina: null,
 
     medirPoolId: null, leituras: {}, escolhas: {}, resultado: null,
-    histPoolId: 'todas', histData: '', histAbertos: {},
+    histPoolId: 'todas', histData: '', histAbertos: {}, histSubTab: 'visitas',
+    evolPoolId: null, evolPeriodo: '90',
     custoPoolId: 'todas',
     salPoolId: null, salAtual: '', salMeta: '', salProdutoId: '', salResultado: null,
     catAtiva: null, produtoFormAberto: false, novoProduto: null,
@@ -940,13 +941,12 @@ function renderHistoryItem(h) {
     </div>`;
 }
 
-function renderScreenHistorico() {
+function renderHistoricoVisitas() {
   const pools = state.piscinas;
   let registros = state.histPoolId === 'todas' ? state.historico.slice() : state.historico.filter((h) => h.piscinaId === state.histPoolId);
   if (state.histData) registros = registros.filter((h) => h.data.slice(0, 10) === state.histData);
   registros.sort((a, b) => new Date(b.data) - new Date(a.data));
   return `
-    <div class="screen-header"><div><div class="kicker">${esc(t('historico.kicker'))}</div><h2>${esc(t('historico.titulo'))}</h2></div></div>
     <div class="filter-row">
       <div class="field" style="flex:1;min-width:180px"><label>${esc(t('historico.piscina'))}</label>
         <select class="input" data-action="set-hist-pool">
@@ -960,6 +960,72 @@ function renderScreenHistorico() {
       ${registros.map(renderHistoryItem).join('')}
       ${!registros.length ? `<p class="empty-note">${esc(t('historico.nenhumRelatorio'))}</p>` : ''}
     </div>`;
+}
+
+const PERIODOS_EVOLUCAO = ['30', '90', '180', '365', 'todos'];
+
+function renderHistoricoEvolucao() {
+  const pools = state.piscinas;
+  if (!pools.length) return `<p class="empty-note">${esc(t('medir.semPiscina'))}</p>`;
+  if (!state.evolPoolId || !pools.some((p) => p.id === state.evolPoolId)) state.evolPoolId = pools[0].id;
+  const pool = piscinaPorId(state.evolPoolId);
+  const sistemaDesinfeccao = ['salino', 'ozonio'].includes(pool.sistemaDesinfeccao) ? pool.sistemaDesinfeccao : 'manual';
+
+  let registros = state.historico.filter((h) => h.piscinaId === pool.id);
+  if (state.evolPeriodo !== 'todos') {
+    const corte = Date.now() - Number(state.evolPeriodo) * 86400000;
+    registros = registros.filter((h) => new Date(h.data).getTime() >= corte);
+  }
+  registros = registros.slice().sort((a, b) => new Date(a.data) - new Date(b.data));
+
+  const parametrosComDados = PARAMETROS
+    .filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao)
+    .map((p) => {
+      const faixa = p.id === 'sal' ? faixaSalDe(pool) : p.faixa;
+      const pontos = pontosEvolucao(registros, p.id, faixa);
+      return { parametro: p, faixa, pontos, resumo: resumoEvolucao(pontos) };
+    })
+    .filter((x) => x.pontos.length > 0);
+
+  const rotuloTendencia = { estavel: t('evolucao.estavel'), melhorando: t('evolucao.melhorando'), recorrente: t('evolucao.recorrente') };
+  const corTendencia = { estavel: 'var(--color-accent)', melhorando: 'var(--color-accent)', recorrente: 'var(--warn-400)' };
+
+  return `
+    <div class="filter-row">
+      <div class="field" style="flex:1;min-width:180px"><label>${esc(t('medir.piscina'))}</label>
+        <select class="input" data-action="set-evol-pool">
+          ${pools.map((p) => `<option value="${p.id}" ${p.id === pool.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" style="flex:0 1 170px"><label>${esc(t('evolucao.periodo'))}</label>
+        <select class="input" data-action="set-evol-periodo">
+          ${PERIODOS_EVOLUCAO.map((p) => `<option value="${p}" ${state.evolPeriodo === p ? 'selected' : ''}>${esc(t('evolucao.periodo.' + p))}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
+      ${parametrosComDados.map(({ parametro, faixa, pontos, resumo }) => `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <div style="font-weight:500;font-size:15px">${esc(t(parametro.nome))}</div>
+            <span style="font-size:11.5px;color:${corTendencia[resumo.tendencia]}">${esc(rotuloTendencia[resumo.tendencia])}</span>
+          </div>
+          <div style="font-size:11.5px;color:rgba(var(--color-text-rgb),.55);margin-top:2px">${esc(t('evolucao.dentroDeTotal', { dentro: resumo.dentro, total: resumo.total }))} · ${esc(t('medir.faixa', { min: numFmt(faixa.min), max: numFmt(faixa.max), unidade: parametro.unidade ? ' ' + parametro.unidade : '' }))}</div>
+          <div style="margin-top:10px">${svgGraficoLinha(pontos, faixa, (v) => numFmt(v))}</div>
+        </div>`).join('')}
+      ${!parametrosComDados.length ? `<p class="empty-note">${esc(t('evolucao.semDados'))}</p>` : ''}
+    </div>`;
+}
+
+function renderScreenHistorico() {
+  const sub = state.histSubTab || 'visitas';
+  return `
+    <div class="screen-header"><div><div class="kicker">${esc(t('historico.kicker'))}</div><h2>${esc(t('historico.titulo'))}</h2></div></div>
+    <div class="auth-tabs" style="max-width:320px;margin-bottom:16px">
+      <button type="button" class="auth-tab${sub === 'visitas' ? ' ativa' : ''}" data-action="set-hist-subtab" data-sub="visitas">${esc(t('historico.abaVisitas'))}</button>
+      <button type="button" class="auth-tab${sub === 'evolucao' ? ' ativa' : ''}" data-action="set-hist-subtab" data-sub="evolucao">${esc(t('historico.abaEvolucao'))}</button>
+    </div>
+    ${sub === 'evolucao' ? renderHistoricoEvolucao() : renderHistoricoVisitas()}`;
 }
 
 /* ── tela: custos ────────────────────────────────────────────────────────── */
@@ -1274,10 +1340,13 @@ const actions = {
   'set-hist-pool': (el) => { state.histPoolId = el.value; },
   'set-hist-data': (el) => { state.histData = el.value; },
   'alternar-historico': (el) => { state.histAbertos[el.dataset.id] = !state.histAbertos[el.dataset.id]; },
+  'set-hist-subtab': (el) => { state.histSubTab = el.dataset.sub; },
+  'set-evol-pool': (el) => { state.evolPoolId = el.value; },
+  'set-evol-periodo': (el) => { state.evolPeriodo = el.value; },
 
   // painel
   'ver-medicao-painel': (el) => {
-    state.tab = 'historico'; state.screen = null;
+    state.tab = 'historico'; state.screen = null; state.histSubTab = 'visitas';
     state.histPoolId = el.dataset.poolid;
     state.histAbertos[el.dataset.id] = true;
   },
