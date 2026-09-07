@@ -164,8 +164,13 @@ input[type=number] { -moz-appearance: textfield; }
 .nav-top-link.ativo { border-color: var(--color-accent); color: var(--color-accent); }
 
 .nav-bottom {
-  position: sticky; bottom: 0; z-index: 5;
-  padding: 7px 8px 12px; display: flex;
+  /* position: fixed (não sticky) ancorado no viewport real — sticky gruda no fundo do #app,
+     que é alto igual a 100vh (o viewport MÁXIMO do celular, com a barra de endereço
+     escondida). Com a barra visível — mais perceptível em telas curtas — o viewport visível
+     fica menor que 100vh, e a barra ficava "flutuando" acima do rodapé de verdade em vez de
+     grudada nele. Fixed sempre gruda no viewport visível, seja qual for o tamanho da tela. */
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  padding: 7px 8px calc(12px + env(safe-area-inset-bottom)); display: flex;
   background: rgba(var(--color-surface-rgb),.94); border-top: 1px solid var(--color-divider);
   backdrop-filter: blur(14px);
 }
@@ -185,7 +190,14 @@ input[type=number] { -moz-appearance: textfield; }
 }
 
 .main { flex: 1; width: 100%; max-width: 900px; margin: 0 auto; padding: 14px 18px 24px; }
-#app { min-height: 100vh; display: flex; flex-direction: column; background: var(--color-bg); }
+#app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--color-bg); }
+
+@media (max-width: 779px) {
+  /* .nav-bottom virou position:fixed (não ocupa mais espaço no fluxo do #app), então reserva
+     aqui embaixo pra ela não tapar o fim do conteúdo — altura aproximada da barra (ícone +
+     rótulo + respiro) mais a faixa de segurança do fundo em telas com "ilha"/indicador. */
+  .main { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+}
 
 /* ── cabeçalhos de tela ──────────────────────────────────────────────── */
 .screen-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
