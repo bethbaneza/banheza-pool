@@ -1153,6 +1153,26 @@ function renderScreenCustos() {
     };
   });
   const totalGeral = chaves.reduce((a, k) => a + porMes[k], 0);
+
+  // Custo médio por visita: total gasto (só produtos com preço cadastrado) dividido pelo
+  // número de medições registradas pra essa mesma piscina/filtro — "visita" aqui é sinônimo
+  // de medição, que é o que o app já registra a cada diagnóstico salvo.
+  const numVisitas = state.historico.filter((h) => state.custoPoolId === 'todas' || h.piscinaId === state.custoPoolId).length;
+  const custoMedioPorVisita = numVisitas > 0 ? moeda(totalGeral / numVisitas) : '—';
+
+  // Tendência mês a mês: compara o último mês com dado contra o mês anterior a ele.
+  let tendenciaTexto = null;
+  if (chaves.length >= 2) {
+    const ultimo = porMes[chaves[chaves.length - 1]];
+    const penultimo = porMes[chaves[chaves.length - 2]];
+    if (penultimo > 0) {
+      const variacaoPct = Math.round(((ultimo - penultimo) / penultimo) * 100);
+      tendenciaTexto = variacaoPct > 2 ? t('custos.aumentou', { pct: variacaoPct })
+        : variacaoPct < -2 ? t('custos.diminuiu', { pct: Math.abs(variacaoPct) })
+        : t('custos.estavelMes');
+    }
+  }
+
   return `
     <div class="screen-header"><div><div class="kicker">${esc(t('custos.kicker'))}</div><h2>${esc(t('custos.titulo'))}</h2></div></div>
     <p class="screen-subtitle">${esc(t('custos.subtitulo'))}</p>
@@ -1161,6 +1181,10 @@ function renderScreenCustos() {
         <option value="todas" ${state.custoPoolId === 'todas' ? 'selected' : ''}>${esc(t('common.todasAsPiscinas'))}</option>
         ${pools.map((p) => `<option value="${p.id}" ${state.custoPoolId === p.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
       </select>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px">
+      <div class="card stat-tile"><div class="stat-tile-value" style="font-size:20px">${custoMedioPorVisita}</div><div class="stat-tile-label">${esc(t('custos.custoMedioPorVisita'))}</div></div>
+      <div class="card stat-tile"><div class="stat-tile-value" style="font-size:20px">${tendenciaTexto ? esc(tendenciaTexto) : '—'}</div><div class="stat-tile-label">${esc(t('custos.tendenciaMensal'))}</div></div>
     </div>
     <div class="divider-label"><span>${esc(t('custos.totalPorProduto'))}</span><span class="rule"></span></div>
     <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:24px">

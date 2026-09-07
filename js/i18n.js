@@ -277,6 +277,11 @@ const TRADUCOES = {
     'custos.semPrecoCadastrado': 'sem preço cadastrado',
     'custos.nenhumConsumo': 'Nenhum consumo registrado ainda. Registre pelo checklist após um diagnóstico.',
     'custos.totalGeral': 'Total geral (produtos com preço cadastrado)',
+    'custos.custoMedioPorVisita': 'Custo médio por visita',
+    'custos.tendenciaMensal': 'Tendência (mês a mês)',
+    'custos.aumentou': 'aumentou {pct}%',
+    'custos.diminuiu': 'diminuiu {pct}%',
+    'custos.estavelMes': 'estável',
 
     // ── produtos ─────────────────────────────────────────────────────────────
     'produtos.titulo': 'Produtos químicos',
@@ -659,6 +664,11 @@ const TRADUCOES = {
     'custos.semPrecoCadastrado': 'no price on file',
     'custos.nenhumConsumo': 'No usage recorded yet. Record it from the checklist after a diagnosis.',
     'custos.totalGeral': 'Grand total (products with a registered price)',
+    'custos.custoMedioPorVisita': 'Average cost per visit',
+    'custos.tendenciaMensal': 'Trend (month over month)',
+    'custos.aumentou': 'up {pct}%',
+    'custos.diminuiu': 'down {pct}%',
+    'custos.estavelMes': 'stable',
 
     'produtos.titulo': 'Chemical products',
     'produtos.fechar': 'Close',
@@ -1036,6 +1046,11 @@ const TRADUCOES = {
     'custos.semPrecoCadastrado': 'sin precio registrado',
     'custos.nenhumConsumo': 'Aún no hay consumo registrado. Regístrelo desde la lista de verificación después de un diagnóstico.',
     'custos.totalGeral': 'Total general (productos con precio registrado)',
+    'custos.custoMedioPorVisita': 'Costo promedio por visita',
+    'custos.tendenciaMensal': 'Tendencia (mes a mes)',
+    'custos.aumentou': 'aumentó {pct}%',
+    'custos.diminuiu': 'disminuyó {pct}%',
+    'custos.estavelMes': 'estable',
 
     'produtos.titulo': 'Productos químicos',
     'produtos.fechar': 'Cerrar',
