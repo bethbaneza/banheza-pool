@@ -144,7 +144,7 @@ function estadoInicial() {
     clientes: [], piscinas: [], produtos: [], historico: [], consumos: [],
     carregandoDados: false, erroCarregar: '',
 
-    tab: 'clientes', screen: null, clienteAtualId: null,
+    tab: 'painel', screen: null, clienteAtualId: null,
     formCliente: null, formPiscina: null,
 
     medirPoolId: null, leituras: {}, escolhas: {}, resultado: null,
@@ -236,6 +236,32 @@ function ultimoDiagnosticoDe(poolId) {
   return todos.reduce((a, b) => (new Date(a.data) > new Date(b.data) ? a : b));
 }
 
+// Nenhuma cadência "oficial" de manutenção veio especificada — 30 dias é uma referência
+// razoável (mensal) pro Painel sinalizar "medição atrasada"; fácil de ajustar aqui se o
+// piscineiro tiver uma rotina diferente (semanal, quinzenal etc.) no futuro.
+const DIAS_PARA_MEDICAO_ATRASADA = 30;
+
+function diasDesde(iso) {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+// Resume o estado de uma piscina pro Painel: 'acao' (cloro fora da faixa — risco sanitário
+// imediato), 'atencao' (algum outro parâmetro fora da faixa, ou medição atrasada) ou 'normal'.
+// Nunca medida entra em 'atencao' (precisa de uma primeira medição), não em 'acao' — não é uma
+// emergência, só falta dado.
+function statusPiscina(pool) {
+  const ult = ultimoDiagnosticoDe(pool.id);
+  if (!ult) return { nivel: 'atencao', semMedicao: true, ult: null, dias: null, atrasada: true, foraCount: 0 };
+  const dias = diasDesde(ult.data);
+  const atrasada = dias > DIAS_PARA_MEDICAO_ATRASADA;
+  const fora = ult.passos.filter((p) => p.status !== 'adequado');
+  const cloroFora = fora.some((p) => p.parametroId === 'cloro');
+  let nivel = 'normal';
+  if (cloroFora) nivel = 'acao';
+  else if (fora.length > 0 || atrasada) nivel = 'atencao';
+  return { nivel, semMedicao: false, ult, dias, atrasada, foraCount: fora.length };
+}
+
 function historyStepView(p) {
   const titulo = t(p.nome) + ': ' + (p.status === 'adequado' ? t('historico.adequado') : t(p.rotuloStatus));
   let detalhe;
@@ -271,6 +297,7 @@ function syncToast() {
 /* ── navegação ───────────────────────────────────────────────────────────── */
 
 const NAV_ITEMS = [
+  ['painel', 'nav.painel', 'ph-gauge'],
   ['clientes', 'nav.cadastros', 'ph-users'],
   ['medir', 'nav.medir', 'ph-drop'],
   ['sal', 'nav.sal', 'ph-cube'],
@@ -334,6 +361,95 @@ function renderAuthScreen() {
         <p class="auth-note">${modo === 'entrar' ? esc(t('auth.notaEntrar')) : esc(t('auth.notaCriar'))}</p>
       </div>
     </section>`;
+}
+
+/* ── tela: painel ────────────────────────────────────────────────────────── */
+
+function renderPainelPoolRow(pool, status) {
+  const cliente = clientePorId(pool.clienteId);
+  const label = cliente ? cliente.nome + ' — ' + pool.nome : pool.nome;
+  const tagLabel = status.semMedicao ? t('painel.nuncaMedida') : status.nivel === 'acao' ? t('poolCard.acao') : t('painel.atencao');
+  // "Ação" usa selo cheio (mais chamativo) — "Em atenção" e "Nunca medida" ficam com contorno
+  // fino, pra diferença de urgência aparecer mesmo com warn-400 e color-warm sendo tons de
+  // laranja parecidos (poderiam se confundir lado a lado se ambos fossem só contorno).
+  const tagStyle = status.nivel === 'acao'
+    ? 'background:var(--warn-400);color:var(--color-bg)'
+    : 'border:1px solid var(--color-warm);color:var(--color-warm)';
+  const detalhes = [];
+  if (!status.semMedicao) {
+    if (status.foraCount > 0) detalhes.push(t('historico.foraDaFaixa', { n: status.foraCount }));
+    detalhes.push(status.atrasada ? t('painel.medicaoAtrasada', { dias: status.dias }) : (status.dias === 0 ? t('painel.hoje') : t('painel.haDias', { dias: status.dias })));
+  }
+  return `
+    <div class="card painel-row">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+        <div>
+          <div style="font-weight:500;font-size:14.5px">${esc(label)}</div>
+          ${detalhes.length ? `<div style="font-size:11.5px;color:rgba(var(--color-text-rgb),.55);margin-top:3px">${esc(detalhes.join(' · '))}</div>` : ''}
+        </div>
+        <span class="tag" style="${tagStyle};flex:none">${esc(tagLabel)}</span>
+      </div>
+      <div class="pool-card-actions" style="margin-top:10px">
+        <button type="button" class="btn btn-ghost" data-action="abrir-cliente" data-id="${pool.clienteId}" style="font-size:12.5px">${esc(t('clientes.abrir'))}</button>
+        <button type="button" class="btn btn-primary" data-action="medir-piscina" data-id="${pool.id}" style="min-height:38px">${esc(t('poolCard.medir'))}</button>
+      </div>
+    </div>`;
+}
+
+function renderScreenPainel() {
+  const piscinasComStatus = state.piscinas.map((pool) => ({ pool, status: statusPiscina(pool) }));
+  const counts = { normal: 0, atencao: 0, acao: 0 };
+  piscinasComStatus.forEach(({ status }) => { counts[status.nivel]++; });
+  const precisamAtencao = piscinasComStatus
+    .filter(({ status }) => status.nivel !== 'normal')
+    .sort((a, b) => {
+      if (a.status.nivel !== b.status.nivel) return a.status.nivel === 'acao' ? -1 : 1;
+      return (b.status.dias ?? 0) - (a.status.dias ?? 0);
+    });
+  const ultimasMedicoes = state.historico.slice().sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 5);
+
+  if (!state.clientes.length) {
+    return `
+      <div class="screen-header"><div><div class="kicker">${esc(t('painel.kicker'))}</div><h2>${esc(t('painel.titulo'))}</h2></div></div>
+      <p class="empty-note">${esc(t('painel.semClientes'))}</p>`;
+  }
+
+  return `
+    <div class="screen-header"><div><div class="kicker">${esc(t('painel.kicker'))}</div><h2>${esc(t('painel.titulo'))}</h2></div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+      <div class="card stat-tile"><div class="stat-tile-value">${counts.normal}</div><div class="stat-tile-label">${esc(t('painel.normal'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--color-warm), var(--shadow-sm)"><div class="stat-tile-value">${counts.atencao}</div><div class="stat-tile-label">${esc(t('painel.atencao'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--warn-400), var(--shadow-sm)"><div class="stat-tile-value">${counts.acao}</div><div class="stat-tile-label">${esc(t('painel.acao'))}</div></div>
+    </div>
+
+    <div class="divider-label"><span>${esc(t('painel.precisaAtencao'))}</span><span class="rule"></span></div>
+    <div style="display:flex;flex-direction:column;gap:11px;margin-bottom:22px">
+      ${precisamAtencao.length ? precisamAtencao.map(({ pool, status }) => renderPainelPoolRow(pool, status)).join('') : `<p class="empty-note">${esc(t('painel.tudoEmDia'))}</p>`}
+    </div>
+
+    <div class="divider-label"><span>${esc(t('painel.ultimasMedicoes'))}</span><span class="rule"></span></div>
+    <div style="display:flex;flex-direction:column;gap:1px;margin-bottom:22px">
+      ${ultimasMedicoes.length ? ultimasMedicoes.map((h) => {
+        const pool = piscinaPorId(h.piscinaId);
+        const cliente = pool ? clientePorId(pool.clienteId) : null;
+        const fora = h.passos.filter((p) => p.status !== 'adequado').length;
+        return `
+          <div class="cost-row">
+            <div>
+              <div class="cost-name">${esc(cliente ? cliente.nome + ' — ' : '')}${esc(pool ? pool.nome : '—')}</div>
+              <div class="cost-detail">${dataHoraFmt(h.data)} · ${fora > 0 ? esc(t('historico.foraDaFaixa', { n: fora })) : esc(t('historico.tudoAdequado'))}</div>
+            </div>
+            <button type="button" class="btn btn-ghost" data-action="ver-medicao-painel" data-id="${h.id}" data-poolid="${h.piscinaId}" style="font-size:12.5px">${esc(t('painel.ver'))}</button>
+          </div>`;
+      }).join('') : `<p class="empty-note">${esc(t('painel.nenhumaMedicaoAinda'))}</p>`}
+    </div>
+
+    <div class="divider-label"><span>${esc(t('painel.acoesRapidas'))}</span><span class="rule"></span></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary" data-action="nav-go" data-tab="medir" style="min-height:44px"><i class="ph ph-drop"></i>${esc(t('painel.novaMedicao'))}</button>
+      <button type="button" class="btn btn-secondary" data-action="nav-go" data-tab="historico" style="min-height:44px"><i class="ph ph-clock-counter-clockwise"></i>${esc(t('painel.verHistorico'))}</button>
+      <button type="button" class="btn btn-secondary" data-action="nav-go" data-tab="custos" style="min-height:44px"><i class="ph ph-chart-bar"></i>${esc(t('painel.verCustos'))}</button>
+    </div>`;
 }
 
 /* ── tela: clientes ──────────────────────────────────────────────────────── */
@@ -1159,6 +1275,13 @@ const actions = {
   'set-hist-data': (el) => { state.histData = el.value; },
   'alternar-historico': (el) => { state.histAbertos[el.dataset.id] = !state.histAbertos[el.dataset.id]; },
 
+  // painel
+  'ver-medicao-painel': (el) => {
+    state.tab = 'historico'; state.screen = null;
+    state.histPoolId = el.dataset.poolid;
+    state.histAbertos[el.dataset.id] = true;
+  },
+
   // custos
   'set-custo-pool': (el) => { state.custoPoolId = el.value; },
 
@@ -1276,7 +1399,8 @@ function renderScreenHtml() {
   if (state.tab === 'sal') return renderScreenSal();
   if (state.tab === 'historico') return renderScreenHistorico();
   if (state.tab === 'custos') return renderScreenCustos();
-  return renderScreenClientes();
+  if (state.tab === 'clientes') return renderScreenClientes();
+  return renderScreenPainel();
 }
 
 function garantirShellApp() {
