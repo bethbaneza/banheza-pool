@@ -150,6 +150,7 @@ function estadoInicial() {
     medirPoolId: null, leituras: {}, escolhas: {}, resultado: null,
     histPoolId: 'todas', histData: '', histAbertos: {}, histSubTab: 'visitas',
     evolPoolId: null, evolPeriodo: '90',
+    relPoolId: null, relMes: '',
     custoPoolId: 'todas',
     salPoolId: null, salAtual: '', salMeta: '', salProdutoId: '', salResultado: null,
     catAtiva: null, produtoFormAberto: false, novoProduto: null,
@@ -963,22 +964,26 @@ function renderHistoricoVisitas() {
 }
 
 const PERIODOS_EVOLUCAO = ['30', '90', '180', '365', 'todos'];
+const ROTULO_TENDENCIA = { estavel: 'evolucao.estavel', melhorando: 'evolucao.melhorando', recorrente: 'evolucao.recorrente' };
+const COR_TENDENCIA = { estavel: 'var(--color-accent)', melhorando: 'var(--color-accent)', recorrente: 'var(--warn-400)' };
 
-function renderHistoricoEvolucao() {
-  const pools = state.piscinas;
-  if (!pools.length) return `<p class="empty-note">${esc(t('medir.semPiscina'))}</p>`;
-  if (!state.evolPoolId || !pools.some((p) => p.id === state.evolPoolId)) state.evolPoolId = pools[0].id;
-  const pool = piscinaPorId(state.evolPoolId);
+// Compartilhado entre a aba Evolução (janela rolante de dias) e a pré-visualização do
+// Relatório mensal (um mês fechado) — mesmo cartão, muda só o conjunto de registros de entrada.
+function renderCardEvolucaoParametro(parametro, faixa, pontos, resumo) {
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <div style="font-weight:500;font-size:15px">${esc(t(parametro.nome))}</div>
+        <span style="font-size:11.5px;color:${COR_TENDENCIA[resumo.tendencia]}">${esc(t(ROTULO_TENDENCIA[resumo.tendencia]))}</span>
+      </div>
+      <div style="font-size:11.5px;color:rgba(var(--color-text-rgb),.55);margin-top:2px">${esc(t('evolucao.dentroDeTotal', { dentro: resumo.dentro, total: resumo.total }))} · ${esc(t('medir.faixa', { min: numFmt(faixa.min), max: numFmt(faixa.max), unidade: parametro.unidade ? ' ' + parametro.unidade : '' }))}</div>
+      <div style="margin-top:10px">${svgGraficoLinha(pontos, faixa, (v) => numFmt(v))}</div>
+    </div>`;
+}
+
+function parametrosComDadosDe(pool, registros) {
   const sistemaDesinfeccao = ['salino', 'ozonio'].includes(pool.sistemaDesinfeccao) ? pool.sistemaDesinfeccao : 'manual';
-
-  let registros = state.historico.filter((h) => h.piscinaId === pool.id);
-  if (state.evolPeriodo !== 'todos') {
-    const corte = Date.now() - Number(state.evolPeriodo) * 86400000;
-    registros = registros.filter((h) => new Date(h.data).getTime() >= corte);
-  }
-  registros = registros.slice().sort((a, b) => new Date(a.data) - new Date(b.data));
-
-  const parametrosComDados = PARAMETROS
+  return PARAMETROS
     .filter((p) => !p.apenasSistema || p.apenasSistema === sistemaDesinfeccao)
     .map((p) => {
       const faixa = p.id === 'sal' ? faixaSalDe(pool) : p.faixa;
@@ -986,9 +991,21 @@ function renderHistoricoEvolucao() {
       return { parametro: p, faixa, pontos, resumo: resumoEvolucao(pontos) };
     })
     .filter((x) => x.pontos.length > 0);
+}
 
-  const rotuloTendencia = { estavel: t('evolucao.estavel'), melhorando: t('evolucao.melhorando'), recorrente: t('evolucao.recorrente') };
-  const corTendencia = { estavel: 'var(--color-accent)', melhorando: 'var(--color-accent)', recorrente: 'var(--warn-400)' };
+function renderHistoricoEvolucao() {
+  const pools = state.piscinas;
+  if (!pools.length) return `<p class="empty-note">${esc(t('medir.semPiscina'))}</p>`;
+  if (!state.evolPoolId || !pools.some((p) => p.id === state.evolPoolId)) state.evolPoolId = pools[0].id;
+  const pool = piscinaPorId(state.evolPoolId);
+
+  let registros = state.historico.filter((h) => h.piscinaId === pool.id);
+  if (state.evolPeriodo !== 'todos') {
+    const corte = Date.now() - Number(state.evolPeriodo) * 86400000;
+    registros = registros.filter((h) => new Date(h.data).getTime() >= corte);
+  }
+  registros = registros.slice().sort((a, b) => new Date(a.data) - new Date(b.data));
+  const parametrosComDados = parametrosComDadosDe(pool, registros);
 
   return `
     <div class="filter-row">
@@ -1004,28 +1021,97 @@ function renderHistoricoEvolucao() {
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
-      ${parametrosComDados.map(({ parametro, faixa, pontos, resumo }) => `
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
-            <div style="font-weight:500;font-size:15px">${esc(t(parametro.nome))}</div>
-            <span style="font-size:11.5px;color:${corTendencia[resumo.tendencia]}">${esc(rotuloTendencia[resumo.tendencia])}</span>
-          </div>
-          <div style="font-size:11.5px;color:rgba(var(--color-text-rgb),.55);margin-top:2px">${esc(t('evolucao.dentroDeTotal', { dentro: resumo.dentro, total: resumo.total }))} · ${esc(t('medir.faixa', { min: numFmt(faixa.min), max: numFmt(faixa.max), unidade: parametro.unidade ? ' ' + parametro.unidade : '' }))}</div>
-          <div style="margin-top:10px">${svgGraficoLinha(pontos, faixa, (v) => numFmt(v))}</div>
-        </div>`).join('')}
+      ${parametrosComDados.map(({ parametro, faixa, pontos, resumo }) => renderCardEvolucaoParametro(parametro, faixa, pontos, resumo)).join('')}
       ${!parametrosComDados.length ? `<p class="empty-note">${esc(t('evolucao.semDados'))}</p>` : ''}
     </div>`;
+}
+
+function mesesDisponiveisDe(poolId) {
+  const chaves = [...new Set(state.historico.filter((h) => h.piscinaId === poolId).map((h) => h.data.slice(0, 7)))];
+  return chaves.sort().reverse();
+}
+
+function rotuloMes(mesChave) {
+  const [ano, mes] = mesChave.split('-').map(Number);
+  const texto = new Date(ano, mes - 1, 1).toLocaleDateString(numLocale(), { month: 'long', year: 'numeric' });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function registrosDoMes(poolId, mesChave) {
+  return state.historico
+    .filter((h) => h.piscinaId === poolId && h.data.slice(0, 7) === mesChave)
+    .sort((a, b) => new Date(a.data) - new Date(b.data));
+}
+
+function ocorrenciasDe(registros) {
+  const lista = [];
+  registros.forEach((r) => {
+    (r.passos || []).filter((p) => p.status !== 'adequado').forEach((p) => lista.push({ data: r.data, passo: p }));
+  });
+  return lista;
+}
+
+function renderHistoricoRelatorios() {
+  const pools = state.piscinas;
+  if (!pools.length) return `<p class="empty-note">${esc(t('medir.semPiscina'))}</p>`;
+  if (!state.relPoolId || !pools.some((p) => p.id === state.relPoolId)) state.relPoolId = pools[0].id;
+  const pool = piscinaPorId(state.relPoolId);
+  const cliente = clientePorId(pool.clienteId);
+  const meses = mesesDisponiveisDe(pool.id);
+
+  const seletorPiscina = `
+    <div class="field" style="flex:1;min-width:180px"><label>${esc(t('medir.piscina'))}</label>
+      <select class="input" data-action="set-rel-pool">
+        ${pools.map((p) => `<option value="${p.id}" ${p.id === pool.id ? 'selected' : ''}>${esc(labelPiscina(p))}</option>`).join('')}
+      </select>
+    </div>`;
+
+  if (!meses.length) {
+    return `<div class="filter-row">${seletorPiscina}</div><p class="empty-note" style="margin-top:14px">${esc(t('relatorio.semMeses'))}</p>`;
+  }
+  if (!state.relMes || !meses.includes(state.relMes)) state.relMes = meses[0];
+
+  const registros = registrosDoMes(pool.id, state.relMes);
+  const parametrosComDados = parametrosComDadosDe(pool, registros);
+  const ocorrencias = ocorrenciasDe(registros);
+
+  return `
+    <div class="filter-row">
+      ${seletorPiscina}
+      <div class="field" style="flex:0 1 200px"><label>${esc(t('relatorio.mes'))}</label>
+        <select class="input" data-action="set-rel-mes">
+          ${meses.map((m) => `<option value="${m}" ${state.relMes === m ? 'selected' : ''}>${esc(rotuloMes(m))}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:500;font-size:15px">${esc(cliente ? cliente.nome + ' — ' : '')}${esc(pool.nome)}</div>
+      <div style="font-size:11.5px;color:rgba(var(--color-text-rgb),.55);margin-top:2px">${esc(rotuloMes(state.relMes))}</div>
+      <div style="margin-top:10px;font-size:13px">${esc(t('relatorio.medicoesRegistradas', { n: registros.length }))}</div>
+      <button type="button" class="btn btn-primary" data-action="baixar-relatorio-mensal" data-poolid="${pool.id}" data-mes="${state.relMes}" style="margin-top:12px;min-height:44px">
+        <i class="ph ph-file-pdf"></i> ${esc(t('relatorio.baixar'))}
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
+      ${parametrosComDados.map(({ parametro, faixa, pontos, resumo }) => renderCardEvolucaoParametro(parametro, faixa, pontos, resumo)).join('')}
+    </div>
+    ${ocorrencias.length ? `
+    <div class="divider-label" style="margin-top:18px"><span>${esc(t('relatorio.ocorrencias'))}</span><span class="rule"></span></div>
+    <div style="display:flex;flex-direction:column;gap:1px">
+      ${ocorrencias.map((o) => `<div class="cost-row"><div class="cost-name">${esc(t(o.passo.nome))}</div><div class="cost-detail">${dataHoraFmt(o.data)} · ${esc(t(o.passo.rotuloStatus))} (${numFmt(o.passo.valor)})</div></div>`).join('')}
+    </div>` : ''}`;
 }
 
 function renderScreenHistorico() {
   const sub = state.histSubTab || 'visitas';
   return `
     <div class="screen-header"><div><div class="kicker">${esc(t('historico.kicker'))}</div><h2>${esc(t('historico.titulo'))}</h2></div></div>
-    <div class="auth-tabs" style="max-width:320px;margin-bottom:16px">
+    <div class="auth-tabs" style="max-width:420px;margin-bottom:16px">
       <button type="button" class="auth-tab${sub === 'visitas' ? ' ativa' : ''}" data-action="set-hist-subtab" data-sub="visitas">${esc(t('historico.abaVisitas'))}</button>
       <button type="button" class="auth-tab${sub === 'evolucao' ? ' ativa' : ''}" data-action="set-hist-subtab" data-sub="evolucao">${esc(t('historico.abaEvolucao'))}</button>
+      <button type="button" class="auth-tab${sub === 'relatorios' ? ' ativa' : ''}" data-action="set-hist-subtab" data-sub="relatorios">${esc(t('historico.abaRelatorios'))}</button>
     </div>
-    ${sub === 'evolucao' ? renderHistoricoEvolucao() : renderHistoricoVisitas()}`;
+    ${sub === 'evolucao' ? renderHistoricoEvolucao() : sub === 'relatorios' ? renderHistoricoRelatorios() : renderHistoricoVisitas()}`;
 }
 
 /* ── tela: custos ────────────────────────────────────────────────────────── */
@@ -1343,6 +1429,14 @@ const actions = {
   'set-hist-subtab': (el) => { state.histSubTab = el.dataset.sub; },
   'set-evol-pool': (el) => { state.evolPoolId = el.value; },
   'set-evol-periodo': (el) => { state.evolPeriodo = el.value; },
+  'set-rel-pool': (el) => { state.relPoolId = el.value; state.relMes = ''; },
+  'set-rel-mes': (el) => { state.relMes = el.value; },
+  'baixar-relatorio-mensal': (el) => {
+    const pool = piscinaPorId(el.dataset.poolid);
+    const cliente = clientePorId(pool.clienteId);
+    const registros = registrosDoMes(pool.id, el.dataset.mes);
+    gerarRelatorioMensal(cliente, pool, el.dataset.mes, registros);
+  },
 
   // painel
   'ver-medicao-painel': (el) => {

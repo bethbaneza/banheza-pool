@@ -115,3 +115,99 @@ function gerarPdfDiagnostico(piscina, registro) {
   const nomeArquivo = `diagnostico-${piscina.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${dataArquivo}.pdf`;
   doc.save(nomeArquivo);
 }
+
+// Relatório técnico mensal — gerado só a partir dos registros já salvos (nenhum número
+// redigitado pelo usuário). cliente pode ser null; mesChave = 'YYYY-MM'; registros = histórico
+// da piscina naquele mês, ordenado por data crescente (ver registrosDoMes() em app.js).
+function gerarRelatorioMensal(cliente, piscina, mesChave, registros) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert(t('pdf.erroCarregar'));
+    return;
+  }
+  const localePdf = numLocale();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt' });
+  const margemEsquerda = 48;
+  const larguraUtil = doc.internal.pageSize.getWidth() - margemEsquerda * 2;
+  const alturaPagina = doc.internal.pageSize.getHeight();
+  let y = 56;
+
+  function novaLinha(altura = 16) {
+    y += altura;
+    if (y > alturaPagina - 56) { doc.addPage(); y = 56; }
+  }
+  function escrever(texto, { tamanho = 11, negrito = false } = {}) {
+    doc.setFontSize(tamanho);
+    doc.setFont(undefined, negrito ? 'bold' : 'normal');
+    const linhas = doc.splitTextToSize(texto, larguraUtil);
+    linhas.forEach((linha) => { doc.text(linha, margemEsquerda, y); novaLinha(tamanho + 6); });
+  }
+
+  const rotuloDoMes = rotuloMes(mesChave);
+  const parametrosComDados = parametrosComDadosDe(piscina, registros);
+  const ocorrencias = ocorrenciasDe(registros);
+
+  escrever(t('relatorio.titulo'), { tamanho: 15, negrito: true });
+  novaLinha(4);
+  escrever(`${t('pdf.cliente')}: ${cliente ? cliente.nome : '—'}`, { negrito: true });
+  escrever(`${t('pdf.piscina')}: ${piscina.nome} (${Math.round(piscina.litros).toLocaleString(localePdf)} L)`);
+  escrever(`${t('evolucao.periodo')}: ${rotuloDoMes}`);
+  novaLinha(8);
+
+  escrever(t('relatorio.atividade'), { tamanho: 12, negrito: true });
+  escrever(t('relatorio.medicoesRegistradas', { n: registros.length }));
+  novaLinha(8);
+
+  escrever(t('relatorio.parametrosMonitorados'), { tamanho: 12, negrito: true });
+  escrever(parametrosComDados.length ? parametrosComDados.map((x) => t(x.parametro.nome)).join(', ') : t('relatorio.semParametros'));
+  novaLinha(8);
+
+  escrever(t('relatorio.faixas'), { tamanho: 12, negrito: true });
+  if (parametrosComDados.length) {
+    parametrosComDados.forEach((x) => {
+      const pct = Math.round((x.resumo.dentro / x.resumo.total) * 100);
+      escrever(`${t(x.parametro.nome)}: ${t('relatorio.dentroDeTotalPct', { dentro: x.resumo.dentro, total: x.resumo.total, pct })}`);
+    });
+  } else {
+    escrever(t('relatorio.semParametros'));
+  }
+  novaLinha(8);
+
+  escrever(t('historico.abaEvolucao'), { tamanho: 12, negrito: true });
+  if (parametrosComDados.length) {
+    parametrosComDados.forEach((x) => {
+      const stats = estatisticasPontos(x.pontos);
+      escrever(t('relatorio.evolucaoLinha', {
+        parametro: t(x.parametro.nome),
+        min: formatarNumero(stats.min, 2), max: formatarNumero(stats.max, 2), media: formatarNumero(stats.media, 2),
+        unidade: x.parametro.unidade ? ' ' + x.parametro.unidade : '',
+        tendencia: t(ROTULO_TENDENCIA[x.resumo.tendencia]),
+      }));
+    });
+  } else {
+    escrever(t('relatorio.semParametros'));
+  }
+  novaLinha(8);
+
+  escrever(t('relatorio.ocorrencias'), { tamanho: 12, negrito: true });
+  if (ocorrencias.length) {
+    ocorrencias.forEach((o) => {
+      escrever(`${new Date(o.data).toLocaleDateString(localePdf)} — ${t(o.passo.nome)}: ${t(o.passo.rotuloStatus)} (${numFmt(o.passo.valor)})`);
+    });
+  } else {
+    escrever(t('relatorio.semOcorrencias'));
+  }
+  novaLinha(8);
+
+  escrever(t('relatorio.resumoTecnico'), { tamanho: 12, negrito: true });
+  const parametrosComOcorrencia = [...new Set(ocorrencias.map((o) => t(o.passo.nome)))];
+  escrever(ocorrencias.length
+    ? t('relatorio.resumoComOcorrencias', { n: registros.length, mes: rotuloDoMes, lista: parametrosComOcorrencia.join(', ') })
+    : t('relatorio.resumoSemOcorrencias', { n: registros.length, mes: rotuloDoMes }));
+
+  novaLinha(12);
+  escrever(t('pdf.aviso'), { tamanho: 9 });
+
+  const nomeArquivo = `relatorio-mensal-${piscina.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${mesChave}.pdf`;
+  doc.save(nomeArquivo);
+}
