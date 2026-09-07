@@ -193,6 +193,17 @@ function resumoEvolucao(pontos) {
   return { total, dentro: total - fora, fora, tendencia };
 }
 
+// Estatísticas simples de uma série de pontos (pontosEvolucao) — usado no relatório técnico
+// mensal (Seção "Evolução"), sem depender de nenhum gráfico ser desenhado.
+function estatisticasPontos(pontos) {
+  const valores = pontos.map((p) => p.y);
+  return {
+    min: Math.min(...valores),
+    max: Math.max(...valores),
+    media: valores.reduce((a, b) => a + b, 0) / valores.length,
+  };
+}
+
 // pontos = [{x: timestamp_ms, y: valor, dentro: bool}, ...] ordenados por x (pontosEvolucao).
 // faixa = {min, max} — desenhada como uma faixa sombreada de fundo, pra ver de relance quando
 // a leitura estava dentro ou fora. formatarValor(n) formata o rótulo do eixo Y (numFmt, etc).
