@@ -60,7 +60,7 @@ function rowToPiscina(r) {
     formato: r.formato, unidade: r.unidade, modoProf: r.modo_prof,
     prof: r.prof, profMin: r.prof_min, profMax: r.prof_max,
     formas: r.formas || [], litros: Number(r.litros), aproximado: !!r.aproximado,
-    litrosManuais: r.litros_manuais, createdAt: r.created_at,
+    litrosManuais: r.litros_manuais, proximaVisita: r.proxima_visita || null, createdAt: r.created_at,
   };
 }
 function piscinaToRow(p) {
@@ -71,7 +71,7 @@ function piscinaToRow(p) {
     formato: p.formato, unidade: p.unidade, modo_prof: p.modoProf,
     prof: p.prof || null, prof_min: p.profMin || null, prof_max: p.profMax || null,
     formas: p.formas || [], litros: p.litros, aproximado: !!p.aproximado,
-    litros_manuais: p.litrosManuais || null,
+    litros_manuais: p.litrosManuais || null, proxima_visita: p.proximaVisita || null,
   };
   if (p.id) row.id = p.id;
   return row;

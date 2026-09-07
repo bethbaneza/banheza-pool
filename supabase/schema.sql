@@ -36,8 +36,11 @@ create table if not exists public.piscinas (
   litros numeric not null,
   aproximado boolean not null default false,
   litros_manuais numeric,
+  proxima_visita date,
   created_at timestamptz not null default now()
 );
+-- Se a tabela já existir de uma versão anterior do schema, garante a coluna sem recriar nada:
+alter table public.piscinas add column if not exists proxima_visita date;
 
 -- ── produtos (catálogo próprio de cada usuário) ──────────────────────────────
 create table if not exists public.produtos (

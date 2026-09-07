@@ -37,6 +37,10 @@ function moeda(n) { return Number(n).toLocaleString(numLocale(), { style: 'curre
 function dataHoraFmt(iso) {
   return new Date(iso).toLocaleString(numLocale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+// dataStr = 'YYYY-MM-DD' (sem hora) — usado pra próxima visita agendada
+function dataFmt(dataStr) {
+  return new Date(dataStr + 'T00:00:00').toLocaleDateString(numLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
 function formatHoras(h) {
   if (h < 1) return Math.round(h * 60) + ' min';
   return (Number.isInteger(h) ? h : nf(h, 1)) + ' h';
@@ -192,7 +196,7 @@ function formVazio(pool) {
   const vazio = {
     id: null, nome: '', sistema: 'manual', salMin: '', salMax: '',
     unidade: 'm', formato: 'retangular', modoProf: 'unica',
-    prof: '', profMin: '', profMax: '', litrosManuais: '',
+    prof: '', profMin: '', profMax: '', litrosManuais: '', proximaVisita: '',
     formas: [{ tipo: 'retangular', comprimento: '', largura: '', diametro: '' }],
   };
   if (!pool) return vazio;
@@ -201,6 +205,7 @@ function formVazio(pool) {
     salMin: pool.faixaSal && pool.faixaSal.min != null ? String(pool.faixaSal.min) : '',
     salMax: pool.faixaSal && pool.faixaSal.max != null ? String(pool.faixaSal.max) : '',
     unidade: pool.unidade || 'm',
+    proximaVisita: pool.proximaVisita || '',
     formato: pool.formato,
     modoProf: pool.modoProf || 'unica',
     prof: pool.modoProf === 'unica' ? String(pool.prof ?? '') : '',
@@ -247,24 +252,33 @@ function diasDesde(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
+// diferença em dias entre hoje e uma data 'YYYY-MM-DD' (negativo = já passou)
+function diasParaData(dataStr) {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const alvo = new Date(dataStr + 'T00:00:00');
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86400000);
+}
+
 // Resume o estado de uma piscina pro Painel em 4 níveis, no mesmo vocabulário da seção de
 // Alertas do plano: 'critico' (cloro fora da faixa — risco sanitário imediato, ação
-// prioritária), 'atencao' (outro parâmetro fora da faixa), 'pendente' (medição atrasada ou
-// nunca feita — falta dado, não é uma emergência de água) e 'normal'. Uma piscina com cloro
-// fora da faixa E atrasada entra em 'critico' (o mais grave decide); fora-da-faixa (não-cloro)
-// tem prioridade sobre atrasada pelo mesmo motivo.
+// prioritária), 'atencao' (outro parâmetro fora da faixa), 'pendente' (medição atrasada, visita
+// agendada vencida, ou nunca medida — falta dado/visita, não é uma emergência de água) e
+// 'normal'. Uma piscina com cloro fora da faixa E atrasada entra em 'critico' (o mais grave
+// decide); fora-da-faixa (não-cloro) tem prioridade sobre atrasada pelo mesmo motivo.
 function statusPiscina(pool) {
   const ult = ultimoDiagnosticoDe(pool.id);
-  if (!ult) return { nivel: 'pendente', semMedicao: true, ult: null, dias: null, atrasada: true, foraCount: 0 };
+  const diasVisita = pool.proximaVisita ? diasParaData(pool.proximaVisita) : null;
+  const visitaVencida = diasVisita != null && diasVisita < 0;
+  if (!ult) return { nivel: 'pendente', semMedicao: true, ult: null, dias: null, atrasada: true, foraCount: 0, diasVisita, visitaVencida };
   const dias = diasDesde(ult.data);
-  const atrasada = dias > DIAS_PARA_MEDICAO_ATRASADA;
+  const atrasada = dias > DIAS_PARA_MEDICAO_ATRASADA || visitaVencida;
   const fora = ult.passos.filter((p) => p.status !== 'adequado');
   const cloroFora = fora.some((p) => p.parametroId === 'cloro');
   let nivel = 'normal';
   if (cloroFora) nivel = 'critico';
   else if (fora.length > 0) nivel = 'atencao';
   else if (atrasada) nivel = 'pendente';
-  return { nivel, semMedicao: false, ult, dias, atrasada, foraCount: fora.length };
+  return { nivel, semMedicao: false, ult, dias, atrasada, foraCount: fora.length, diasVisita, visitaVencida };
 }
 
 function historyStepView(p) {
@@ -310,8 +324,21 @@ const NAV_ITEMS = [
   ['custos', 'nav.custos', 'ph-chart-bar'],
 ];
 
+// Botão de lembretes do navegador é opcional e só dentro do app (sem push/servidor) — some da
+// barra quando o navegador não suporta Notification ou quando a pessoa já negou a permissão
+// (nesse caso pedir de novo não mostraria diálogo nenhum, só ficaria um botão morto).
+function podeOferecerNotificacoes() {
+  return typeof Notification !== 'undefined' && Notification.permission !== 'denied';
+}
+
 function renderPrefsButtons() {
+  const notifBtn = podeOferecerNotificacoes()
+    ? `<button type="button" class="btn btn-secondary btn-icon" data-action="pedir-notificacoes" title="${esc(t(Notification.permission === 'granted' ? 'nav.notif.ativado' : 'nav.notif.ativar'))}" style="width:36px;height:36px">
+        <i class="ph ${Notification.permission === 'granted' ? 'ph-bell-ringing' : 'ph-bell'}"></i>
+      </button>`
+    : '';
   return `
+    ${notifBtn}
     <button type="button" class="btn btn-secondary btn-icon" data-action="alternar-tema" title="${esc(t(tema === 'dark' ? 'nav.tema.paraClaro' : 'nav.tema.paraEscuro'))}" style="width:36px;height:36px">
       <i class="ph ${tema === 'dark' ? 'ph-sun' : 'ph-moon'}"></i>
     </button>
@@ -385,8 +412,12 @@ function renderPainelPoolRow(pool, status) {
   const detalhes = [];
   if (!status.semMedicao) {
     if (status.foraCount > 0) detalhes.push(t('historico.foraDaFaixa', { n: status.foraCount }));
-    detalhes.push(status.atrasada ? t('painel.medicaoAtrasada', { dias: status.dias }) : (status.dias === 0 ? t('painel.hoje') : t('painel.haDias', { dias: status.dias })));
+    if (status.visitaVencida) detalhes.push(t('painel.visitaAtrasada', { dias: Math.abs(status.diasVisita) }));
+    else detalhes.push(status.atrasada ? t('painel.medicaoAtrasada', { dias: status.dias }) : (status.dias === 0 ? t('painel.hoje') : t('painel.haDias', { dias: status.dias })));
+  } else if (status.visitaVencida) {
+    detalhes.push(t('painel.visitaAtrasada', { dias: Math.abs(status.diasVisita) }));
   }
+  if (!status.visitaVencida && status.diasVisita != null) detalhes.push(t('painel.proximaVisitaEm', { data: dataFmt(pool.proximaVisita) }));
   return `
     <div class="card painel-row">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
@@ -403,15 +434,26 @@ function renderPainelPoolRow(pool, status) {
     </div>`;
 }
 
+// Janela de antecedência pro lembrete de "visita agendada chegando" (dias) — nenhuma cadência
+// oficial veio especificada; 3 dias dá tempo de reorganizar a agenda sem virar aviso o tempo todo.
+const DIAS_LEMBRETE_VISITA_PROXIMA = 3;
+
 // Alertas informativos: lembretes/recomendações gerais, não ligados a uma piscina específica
-// (diferente de Crítico/Atenção/Pendente, que são sempre sobre o estado de uma piscina). Por
-// enquanto só um, baseado em dado real (produtos sem preço deixam o relatório de Custos
-// incompleto) — nada inventado, só o que dá pra derivar do catálogo que a pessoa já cadastrou.
+// (diferente de Crítico/Atenção/Pendente, que são sempre sobre o estado de uma piscina) — item
+// "Informativo: lembrete ou recomendação" da seção de Alertas do plano.
 function alertasInformativos() {
   const alertas = [];
   const semPreco = state.produtos.filter((p) => !p.preco).length;
   if (semPreco > 0) {
     alertas.push({ texto: t('painel.produtosSemPreco', { n: semPreco }), acao: 'ir-produtos' });
+  }
+  const proximas = state.piscinas.filter((p) => {
+    if (!p.proximaVisita) return false;
+    const d = diasParaData(p.proximaVisita);
+    return d >= 0 && d <= DIAS_LEMBRETE_VISITA_PROXIMA;
+  }).length;
+  if (proximas > 0) {
+    alertas.push({ texto: t('painel.lembreteVisitasProximas', { n: proximas }), acao: 'nav-go', tab: 'clientes' });
   }
   return alertas;
 }
@@ -449,7 +491,7 @@ function renderScreenPainel() {
     ${informativos.length ? `
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
       ${informativos.map((a) => `
-        <button type="button" class="notice-flat" style="text-align:left;border:none;font-family:inherit;cursor:pointer;width:100%" data-action="${a.acao}">
+        <button type="button" class="notice-flat" style="text-align:left;border:none;font-family:inherit;cursor:pointer;width:100%" data-action="${a.acao}"${a.tab ? ` data-tab="${a.tab}"` : ''}>
           <i class="ph ph-info" style="margin-right:6px"></i>${esc(a.texto)}
         </button>`).join('')}
     </div>` : ''}
@@ -592,6 +634,9 @@ function renderPoolCard(p) {
     : fora > 0 ? 'border:1px solid var(--warn-400);color:var(--warn-400)'
     : 'background:var(--color-accent-800);color:var(--color-accent-100)';
   const meta = !ult ? t('poolCard.nenhumaLeitura') : dataHoraFmt(ult.data) + (fora > 0 ? ' · ' + fora + ' ' + t('poolCard.correcoes') : '');
+  const visitaTxt = p.proximaVisita
+    ? (diasParaData(p.proximaVisita) < 0 ? t('poolCard.visitaAtrasadaDesde', { data: dataFmt(p.proximaVisita) }) : t('poolCard.proximaVisita', { data: dataFmt(p.proximaVisita) }))
+    : '';
   return `
     <div class="card pool-card">
       <div class="pool-card-top">
@@ -600,7 +645,7 @@ function renderPoolCard(p) {
       </div>
       <div class="pool-chip-row">${chips}</div>
       <div class="pool-card-bottom">
-        <span class="pool-card-meta">${esc(meta)}</span>
+        <span class="pool-card-meta">${esc(meta)}${visitaTxt ? ' · ' + esc(visitaTxt) : ''}</span>
         <div class="pool-card-actions">
           <button type="button" class="btn btn-ghost" data-action="editar-piscina" data-id="${p.id}" style="font-size:12.5px">${esc(t('poolCard.editar'))}</button>
           <button type="button" class="btn btn-primary" data-action="medir-piscina" data-id="${p.id}" style="min-height:38px">${esc(t('poolCard.medir'))}</button>
@@ -667,6 +712,7 @@ function renderScreenCadastroPiscina() {
             <label class="seg-opt"><input type="radio" name="un" data-action="set-unidade" data-tipo="cm" ${f.unidade === 'cm' ? 'checked' : ''} />${esc(t('piscinaForm.centimetros'))}</label>
           </span>
         </div>
+        <div class="field"><label>${esc(t('piscinaForm.proximaVisita'))}</label><input class="input" type="date" data-action="set-proxima-visita" value="${esc(f.proximaVisita)}" /></div>
       </div>
       <div class="card">
         <div>
@@ -1297,6 +1343,16 @@ const actions = {
     const i = IDIOMAS_SUPORTADOS.indexOf(idioma);
     definirIdioma(IDIOMAS_SUPORTADOS[(i + 1) % IDIOMAS_SUPORTADOS.length]);
   },
+  'pedir-notificacoes': () => {
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'granted') {
+      new Notification(t('notif.tituloAtivado'), { body: t('notif.corpoAtivado') });
+      return;
+    }
+    return Notification.requestPermission().then((perm) => {
+      if (perm === 'granted') new Notification(t('notif.tituloAtivado'), { body: t('notif.corpoAtivado') });
+    });
+  },
 
   // navegação
   'nav-go': (el) => { state.tab = el.dataset.tab; state.screen = null; },
@@ -1348,6 +1404,7 @@ const actions = {
   'set-sal-min': (el) => { state.formPiscina.salMin = el.value; },
   'set-sal-max': (el) => { state.formPiscina.salMax = el.value; },
   'set-unidade': (el) => { state.formPiscina.unidade = el.dataset.tipo; },
+  'set-proxima-visita': (el) => { state.formPiscina.proximaVisita = el.value; },
   'set-modo-prof': (el) => { state.formPiscina.modoProf = el.dataset.tipo; },
   'set-prof': (el) => { state.formPiscina.prof = el.value; },
   'set-prof-min': (el) => { state.formPiscina.profMin = el.value; },
@@ -1385,6 +1442,7 @@ const actions = {
       formas: f.formato !== 'irregular' ? f.formas : [],
       litros: calc.litros, aproximado: !!calc.aproximado,
       litrosManuais: f.formato === 'irregular' ? f.litrosManuais : null,
+      proximaVisita: f.proximaVisita || null,
     };
     await DB.salvarPiscina(registro);
     state.piscinas = await DB.listarPiscinas();
@@ -1759,11 +1817,28 @@ async function carregarDadosIniciais() {
     ]);
     state.clientes = clientes; state.piscinas = piscinas; state.produtos = produtos;
     state.historico = historico; state.consumos = consumos;
+    talvezNotificarPendencias();
   } catch (e) {
     state.erroCarregar = e.message || t('auth.erroCarregarDados');
   }
   state.carregandoDados = false;
   renderAll();
+}
+
+// Lembrete opcional do navegador (só funciona com o app aberto e a permissão já concedida pela
+// pessoa no sino da barra superior — nunca pede permissão sozinho). No máximo um por dia, pra
+// não repetir o aviso a cada vez que o app é reaberto na mesma piscina crítica/vencida.
+function talvezNotificarPendencias() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  const hoje = new Date().toISOString().slice(0, 10);
+  try {
+    if (localStorage.getItem('bp_notif_ultima_data') === hoje) return;
+  } catch (e) { /* localStorage indisponível — segue sem controlar frequência */ }
+  const criticas = state.piscinas.filter((p) => statusPiscina(p).nivel === 'critico').length;
+  const visitasVencidas = state.piscinas.filter((p) => statusPiscina(p).visitaVencida).length;
+  if (criticas === 0 && visitasVencidas === 0) return;
+  try { localStorage.setItem('bp_notif_ultima_data', hoje); } catch (e) { /* segue sem salvar */ }
+  new Notification(t('notif.tituloResumo'), { body: t('notif.corpoResumo', { criticas, visitas: visitasVencidas }) });
 }
 
 function renderNaoConfigurado() {
