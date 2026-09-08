@@ -2,7 +2,7 @@
 // offline. Dados (Supabase) e dependências externas (fontes, ícones, jsPDF, supabase-js)
 // seguem sempre direto pela rede — não fazem sentido em cache, e o app já avisa quando não
 // consegue falar com o servidor.
-const CACHE_NAME = 'banheza-pool-v3';
+const CACHE_NAME = 'banheza-pool-v4';
 const APP_SHELL = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const APP_SHELL = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './assets/brand/symbol-b.png',
 ];
 
 self.addEventListener('install', (event) => {

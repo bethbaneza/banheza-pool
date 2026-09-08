@@ -48,6 +48,13 @@ function formatHoras(h) {
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// Lockup da marca (símbolo "B" + BANHEZA/POOL) — ver .brand-symbol/.brand-lockup em
+// style.css para o dimensionamento por contexto (nav-top, mobile-header, auth-brand).
+function renderBrandLockup() {
+  return `
+    <img class="brand-symbol" src="assets/brand/symbol-b.png" alt="" />
+    <span class="brand-lockup"><span class="brand-wordmark">BANHEZA</span><span class="brand-product">POOL</span></span>`;
+}
 function produtosDe(produtos, tipos) { return produtos.filter((p) => tipos.indexOf(p.tipo) >= 0); }
 function produtoPorId(produtos, id) { return id ? produtos.find((p) => p.id === id) || null : null; }
 function pos(x, span) { return Math.max(0, Math.min(100, ((x - span.min) / (span.max - span.min)) * 100)); }
@@ -349,7 +356,7 @@ function renderNav() {
   const ativoId = !state.screen ? state.tab : null;
   document.getElementById('nav-top').innerHTML = `
     <div class="nav-top-inner">
-      <div class="brand"><i class="ph ph-drop brand-icon"></i><span class="brand-label">Banheza Pool</span></div>
+      <div class="brand">${renderBrandLockup()}</div>
       ${NAV_ITEMS.map(([id, label, icon]) => `
         <button type="button" class="nav-top-link${ativoId === id ? ' ativo' : ''}" data-action="nav-go" data-tab="${id}"><i class="ph ${icon}"></i>${esc(t(label))}</button>
       `).join('')}
@@ -362,8 +369,7 @@ function renderNav() {
   const mobileHeader = document.getElementById('mobile-header');
   if (mobileHeader) {
     mobileHeader.innerHTML = `
-      <i class="ph ph-drop brand-icon"></i>
-      <span class="brand-label" style="flex:1">Banheza Pool</span>
+      <div style="flex:1;display:flex;align-items:center;gap:8px">${renderBrandLockup()}</div>
       ${renderPrefsButtons()}
       <button type="button" class="account-btn" data-action="sair" style="margin-left:6px"><i class="ph ph-sign-out"></i>${esc(t('nav.sair'))}</button>`;
   }
@@ -377,7 +383,7 @@ function renderAuthScreen() {
     <section class="auth-screen">
       <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px">${renderPrefsButtons()}</div>
       <div class="auth-card">
-        <div class="auth-brand"><i class="ph ph-drop brand-icon"></i><span class="brand-label">Banheza Pool</span></div>
+        <div class="auth-brand">${renderBrandLockup()}</div>
         <div class="auth-tabs">
           <button type="button" class="auth-tab${modo === 'entrar' ? ' ativa' : ''}" data-action="auth-set-modo" data-modo="entrar">${esc(t('auth.entrar'))}</button>
           <button type="button" class="auth-tab${modo === 'criar' ? ' ativa' : ''}" data-action="auth-set-modo" data-modo="criar">${esc(t('auth.criarConta'))}</button>
@@ -401,9 +407,9 @@ function renderPainelPoolRow(pool, status) {
   const cliente = clientePorId(pool.clienteId);
   const label = cliente ? cliente.nome + ' — ' + pool.nome : pool.nome;
   const tagLabel = status.semMedicao ? t('painel.nuncaMedida') : t('painel.' + status.nivel);
-  // "Crítico" usa selo cheio (mais chamativo); "Atenção" contorno laranja; "Pendente" (ou
-  // "nunca medida") um contorno neutro — a urgência precisa dar pra distinguir de relance
-  // mesmo com warn-400 e color-warm sendo tons de laranja parecidos entre si.
+  // "Crítico" usa selo cheio em vermelho (warn-400, status-danger da marca) — mais chamativo
+  // e semanticamente mais grave; "Atenção" contorno âmbar (color-warm, status-warn); "Pendente"
+  // (ou "nunca medida") um contorno neutro — três níveis de urgência distinguíveis de relance.
   const tagStyle = status.nivel === 'critico'
     ? 'background:var(--warn-400);color:var(--color-bg)'
     : status.nivel === 'atencao'
@@ -1845,7 +1851,7 @@ function renderNaoConfigurado() {
   document.getElementById('root').innerHTML = `
     <div class="auth-screen">
       <div class="auth-card">
-        <div class="auth-brand"><i class="ph ph-drop brand-icon"></i><span class="brand-label">Banheza Pool</span></div>
+        <div class="auth-brand">${renderBrandLockup()}</div>
         <div class="auth-form">
           <p class="auth-error">${t('auth.naoConfigurado')}</p>
         </div>

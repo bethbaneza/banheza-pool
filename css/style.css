@@ -1,46 +1,52 @@
-/* Banheza Pool — tema Nocturne
-   Tokens portados do design system (ver handoff "Redesign do app no Nocturne" do projeto
-   calculadora-piscinas, de onde este app foi derivado). */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Banheza Pool — tema de marca
+   Cores, tipografia e logotipo portados do Banheza Design System oficial (pasta
+   "Banheza_Design_System"): navy + azul/ciano, símbolo "B" em gradiente, Exo 2 no
+   logotipo/títulos e Montserrat no texto de interface. Ver tokens/colors.css,
+   tokens/themes.css e tokens/typography.css do sistema para a fonte de cada valor. */
+@import url("https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap");
 
 :root {
-  --color-bg: #161826;
-  --color-bg-rgb: 22,24,38;
-  --color-surface: #232532;
-  --color-surface-rgb: 35,37,50;
-  --color-text: #e9e9ed;
-  --color-text-rgb: 233,233,237;
-  --color-accent: #9184d9;
-  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
+  --color-bg: #001030;
+  --color-bg-rgb: 0,16,48;
+  --color-surface: #001840;
+  --color-surface-rgb: 0,24,64;
+  --color-text: #f5f7fa;
+  --color-text-rgb: 245,247,250;
+  --color-accent: #0090f8;
+  --color-divider: color-mix(in srgb, #f5f7fa 16%, transparent);
 
-  --color-neutral-100: #f3f5fe;
-  --color-neutral-800: #3f424d;
-  --color-neutral-900: #292b31;
+  --color-neutral-100: #e9edf3;
+  --color-neutral-800: #2a3247;
+  --color-neutral-900: #192031;
 
-  --color-accent-100: #f5f4ff;
-  --color-accent-200: #e7e5fe;
-  --color-accent-300: #d2cefd;
-  --color-accent-700: #5d5294;
-  --color-accent-800: #423a6a;
-  --color-accent-900: #2b2741;
+  --color-accent-100: #d6f4fd;
+  --color-accent-200: #7ee4fb;
+  --color-accent-300: #00d0f8;
+  --color-accent-700: #0070e0;
+  --color-accent-800: #0050d1;
+  --color-accent-900: #003068;
 
-  --color-section: #262a60;
-  --color-section-glow: #353b80;
+  --color-section: #001840;
+  --color-section-glow: #0050d1;
 
-  /* Acento secundário (laranja) — usado com moderação para destacar os cadastros
-     (clientes/produtos), sem competir com o acento roxo principal do resto do app. */
-  --color-warm: #e2984d;
-  --color-warm-100: #fbe9d3;
+  /* Acento secundário (âmbar) — status-warn da marca, usado com moderação para
+     destacar os cadastros (clientes/produtos) e o nível "Atenção" dos alertas, sem
+     competir com o azul/ciano principal do resto do app. */
+  --color-warm: #f2a71b;
+  --color-warm-100: #fdecd2;
 
-  /* Nocturne não tem papel de aviso — par derivado em OKLCH na mesma escala
-     de luminosidade das rampas (L 0.750/0.920/0.350, matiz 62), usado só
-     para leituras fora da faixa e avisos técnicos. */
-  --warn-400: oklch(0.750 0.125 62);
-  --warn-200: oklch(0.920 0.058 62);
-  --warn-800: oklch(0.350 0.090 62);
+  /* status-danger da marca — leituras fora da faixa e avisos técnicos. Antes uma
+     rampa em OKLCH derivada porque a Nocturne não tinha cor de aviso própria; agora
+     é o vermelho semântico oficial (--status-danger), com tons claro/escuro pra
+     manter texto legível tanto sobre superfícies escuras quanto claras. */
+  --warn-400: #e2453c;
+  --warn-200: #f5a9a3;
+  --warn-800: #4a120d;
 
-  --font-heading: "Inter", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
+  --font-heading: "Exo 2", system-ui, sans-serif;
+  --font-body: "Montserrat", system-ui, sans-serif;
+  --ls-wordmark: .16em;
+  --ls-product: .34em;
 
   --space-1: 2.8px;
   --space-2: 5.6px;
@@ -53,9 +59,10 @@
   --radius-md: 8px;
   --radius-lg: 14px;
 
-  --shadow-sm: 0 0 0 1px #3f424d;
-  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0,0,0,0.55);
-  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0,0,0,0.65);
+  /* Sombras sempre tingidas de navy (rgba(0,16,48,…)), nunca preto — regra da marca. */
+  --shadow-sm: 0 0 0 1px #3f4a5e;
+  --shadow-md: 0 0 0 1px #5d6a7e, 0 6px 18px rgba(0,16,48,0.55);
+  --shadow-lg: 0 0 0 1px #8a97a8, 0 16px 40px rgba(0,16,48,0.65);
 }
 
 /* ── modo claro ──────────────────────────────────────────────────────────
@@ -63,40 +70,41 @@
    sistema — por isso é um atributo (data-theme) e não uma media query. A tela de
    login/criar conta (.auth-screen) fica de fora de propósito: ela recongela essas
    mesmas variáveis pros valores escuros logo abaixo, mantendo a "capa" da marca sempre
-   com a mesma aparência, independente do tema escolhido para dentro do app. */
+   com a mesma aparência (o gradiente de abertura Pool), independente do tema
+   escolhido para dentro do app. */
 :root[data-theme="light"] {
-  --color-bg: #f5f4fa;
-  --color-bg-rgb: 245,244,250;
+  --color-bg: #f5f7fa;
+  --color-bg-rgb: 245,247,250;
   --color-surface: #ffffff;
   --color-surface-rgb: 255,255,255;
-  --color-text: #1c1d27;
-  --color-text-rgb: 28,29,39;
-  --color-accent: #6a5bc2;
-  --color-divider: color-mix(in srgb, #1c1d27 14%, transparent);
-  --color-warm: #a85f22;
-  --shadow-sm: 0 0 0 1px #e0dcee;
-  --shadow-md: 0 0 0 1px #d6d0e8, 0 6px 18px rgba(40,32,74,0.10);
-  --shadow-lg: 0 0 0 1px #c7bfdd, 0 16px 40px rgba(40,32,74,0.16);
-  --warn-400: oklch(0.560 0.150 62);
-  --warn-200: oklch(0.400 0.140 62);
+  --color-text: #001030;
+  --color-text-rgb: 0,16,48;
+  --color-accent: #0090f8;
+  --color-divider: color-mix(in srgb, #001030 14%, transparent);
+  --color-warm: #a06b0a;
+  --shadow-sm: 0 0 0 1px #d6dde7;
+  --shadow-md: 0 0 0 1px #b9c4d2, 0 6px 18px rgba(0,16,48,0.10);
+  --shadow-lg: 0 0 0 1px #8a97a8, 0 16px 40px rgba(0,16,48,0.16);
+  --warn-400: #e2453c;
+  --warn-200: #a3291f;
 }
 
 .auth-screen {
   position: relative;
-  --color-bg: #161826;
-  --color-bg-rgb: 22,24,38;
-  --color-surface: #232532;
-  --color-surface-rgb: 35,37,50;
-  --color-text: #e9e9ed;
-  --color-text-rgb: 233,233,237;
-  --color-accent: #9184d9;
-  --color-divider: color-mix(in srgb, #e9e9ed 16%, transparent);
-  --color-warm: #e2984d;
-  --shadow-sm: 0 0 0 1px #3f424d;
-  --shadow-md: 0 0 0 1px #595d6c, 0 6px 18px rgba(0,0,0,0.55);
-  --shadow-lg: 0 0 0 1px #9397ab, 0 16px 40px rgba(0,0,0,0.65);
-  --warn-400: oklch(0.750 0.125 62);
-  --warn-200: oklch(0.920 0.058 62);
+  --color-bg: #001030;
+  --color-bg-rgb: 0,16,48;
+  --color-surface: #001840;
+  --color-surface-rgb: 0,24,64;
+  --color-text: #f5f7fa;
+  --color-text-rgb: 245,247,250;
+  --color-accent: #0090f8;
+  --color-divider: color-mix(in srgb, #f5f7fa 16%, transparent);
+  --color-warm: #f2a71b;
+  --shadow-sm: 0 0 0 1px #3f4a5e;
+  --shadow-md: 0 0 0 1px #5d6a7e, 0 6px 18px rgba(0,16,48,0.55);
+  --shadow-lg: 0 0 0 1px #8a97a8, 0 16px 40px rgba(0,16,48,0.65);
+  --warn-400: #e2453c;
+  --warn-200: #f5a9a3;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -135,12 +143,33 @@ input[type=number] { -moz-appearance: textfield; }
   border-top: 1px solid var(--color-divider); padding-top: 14px;
 }
 
+/* ── logotipo da marca (símbolo "B" + BANHEZA/POOL) ─────────────────────
+   Reprodução em texto do componente Logo do design system (BANHEZA em Exo 2 com
+   entreletra aberta .16em, POOL como palavra-produto em .34em na cor de acento) —
+   o mesmo padrão usado pelos lockups compactos oficiais. O símbolo é raster porque
+   é arte de origem vetorial sem fonte equivalente; o texto nunca é substituído
+   pelo logotipo em PNG para não perder nitidez em qualquer tamanho. */
+.brand-symbol { display: block; width: auto; }
+.brand-lockup { display: flex; flex-direction: column; line-height: 1; }
+.brand-wordmark {
+  font-family: var(--font-heading); font-weight: 700;
+  letter-spacing: var(--ls-wordmark); text-indent: var(--ls-wordmark); color: var(--color-text);
+}
+.brand-product {
+  font-family: var(--font-heading); font-weight: 500;
+  letter-spacing: var(--ls-product); text-indent: var(--ls-product); color: var(--color-accent-300);
+}
+/* Ciano pop bem sobre navy (tema escuro e .auth-screen, sempre escura); sobre o nav
+   branco do tema claro fica pouco legível, então usa um azul mais escuro ali. */
+:root[data-theme="light"] .brand-product { color: #0050d1; }
+
 /* ── shell / navegação ───────────────────────────────────────────────── */
 .mobile-header {
   padding: 14px 18px 8px; display: flex; align-items: center; gap: 9px;
 }
-.mobile-header .brand-icon { font-size: 18px; color: var(--color-accent); }
-.mobile-header .brand-label { font-size: 13px; font-weight: 500; letter-spacing: .01em; }
+.mobile-header .brand-symbol { height: 22px; }
+.mobile-header .brand-wordmark { font-size: 12px; }
+.mobile-header .brand-product { font-size: 7px; margin-top: 2px; }
 
 .nav-top {
   display: none;
@@ -153,8 +182,9 @@ input[type=number] { -moz-appearance: textfield; }
   display: flex; align-items: center; gap: 22px;
 }
 .nav-top-inner .brand { display: flex; align-items: center; gap: 9px; margin-right: auto; }
-.nav-top-inner .brand-icon { font-size: 20px; color: var(--color-accent); }
-.nav-top-inner .brand-label { font-family: Inter; font-weight: 500; font-size: 16px; }
+.nav-top-inner .brand-symbol { height: 26px; }
+.nav-top-inner .brand-wordmark { font-size: 14px; }
+.nav-top-inner .brand-product { font-size: 8px; margin-top: 2px; }
 .nav-top-link {
   display: flex; align-items: center; gap: 7px; padding: 8px 11px; min-height: 40px;
   border-radius: var(--radius-md); border: 1px solid transparent; background: transparent;
@@ -453,9 +483,10 @@ select.input { appearance: none; }
   background: radial-gradient(120% 130% at 15% 0%, var(--color-section-glow), var(--color-section) 60%);
 }
 .auth-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 16px; }
-.auth-brand { display: flex; align-items: center; gap: 9px; justify-content: center; margin-bottom: 4px; }
-.auth-brand .brand-icon { font-size: 22px; color: var(--color-accent); }
-.auth-brand .brand-label { font-size: 18px; font-weight: 500; }
+.auth-brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 4px; }
+.auth-brand .brand-symbol { height: 34px; }
+.auth-brand .brand-wordmark { font-size: 17px; }
+.auth-brand .brand-product { font-size: 9px; margin-top: 2px; }
 .auth-tabs { display: flex; border: 1px solid var(--color-divider); border-radius: var(--radius-md); overflow: hidden; }
 .auth-tab {
   flex: 1; text-align: center; padding: 10px; font-size: 13.5px; cursor: pointer; background: transparent;
