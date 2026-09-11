@@ -476,7 +476,7 @@ function renderScreenPainel() {
       if (a.status.nivel !== b.status.nivel) return PRIORIDADE_NIVEL[a.status.nivel] - PRIORIDADE_NIVEL[b.status.nivel];
       return (b.status.dias ?? 0) - (a.status.dias ?? 0);
     });
-  const ultimasMedicoes = state.historico.slice().sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 5);
+  const ultimasMedicoes = state.historico.slice().sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 1);
   const informativos = alertasInformativos();
 
   if (!state.clientes.length) {
