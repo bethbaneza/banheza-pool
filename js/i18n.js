@@ -374,6 +374,7 @@ const TRADUCOES = {
     'geradorSalino.cloro.descer': 'Piscina com gerador salino: reduza a produção (%) do gerador conforme o manual do equipamento.',
     'avisoOzonio.cloro': 'Piscina com gerador de ozônio: o ozônio faz parte da desinfecção, então a meta de cloro livre real pode ser bem menor que a faixa padrão (0,5–3 ppm). Não há um valor de referência único — confirme com um técnico responsável a faixa reduzida recomendada para o seu sistema antes de dosar.',
     'avisoCianuricoAlto.cloro': 'Ácido Cianúrico está alto nesta leitura — isso "trava" parte do cloro livre (chlorine lock). Para compensar, considere manter o Cloro Livre na parte de cima da faixa (perto de 3 ppm) em vez do meio; confirme com um técnico responsável se isso é suficiente para o seu caso.',
+    'avisoTemperaturaAlta.cloro': 'Temperatura da água acima da faixa ideal nesta leitura — água mais quente favorece reações químicas e o crescimento de microrganismos, aumentando o consumo de cloro. Para compensar, considere manter o Cloro Livre na parte de cima da faixa (perto de 3 ppm) em vez do meio, e reteste com mais frequência.',
 
     'causa.temperatura.alto': 'Aquecimento excessivo, exposição solar direta prolongada, ou clima muito quente.',
     'causa.temperatura.baixo': 'Clima frio, ausência de aquecimento, ou perda de calor noturna.',
@@ -773,6 +774,7 @@ const TRADUCOES = {
     'geradorSalino.cloro.descer': 'Pool with a salt chlorinator: reduce the generator\'s output (%) per the equipment manual.',
     'avisoOzonio.cloro': 'Pool with an ozone generator: ozone is part of the disinfection, so the real free chlorine target can be well below the standard range (0.5–3 ppm). There is no single reference value — confirm the reduced range recommended for your system with a responsible technician before dosing.',
     'avisoCianuricoAlto.cloro': 'Cyanuric Acid is high in this reading — this "locks" part of the free chlorine (chlorine lock). To compensate, consider keeping Free Chlorine near the top of the range (close to 3 ppm) instead of the middle; confirm with a responsible technician whether this is enough for your case.',
+    'avisoTemperaturaAlta.cloro': 'Water temperature is above the ideal range in this reading — warmer water favors chemical reactions and microbial growth, increasing chlorine demand. To compensate, consider keeping Free Chlorine near the top of the range (close to 3 ppm) instead of the middle, and retest more often.',
 
     'causa.temperatura.alto': 'Excessive heating, prolonged direct sun exposure, or very hot weather.',
     'causa.temperatura.baixo': 'Cold weather, no heating, or overnight heat loss.',
@@ -1169,6 +1171,7 @@ const TRADUCOES = {
     'geradorSalino.cloro.descer': 'Piscina con generador salino: reduzca la producción (%) del generador según el manual del equipo.',
     'avisoOzonio.cloro': 'Piscina con generador de ozono: el ozono forma parte de la desinfección, por lo que la meta real de cloro libre puede ser mucho menor que el rango estándar (0,5–3 ppm). No hay un valor de referencia único — confirme con un técnico responsable el rango reducido recomendado para su sistema antes de dosificar.',
     'avisoCianuricoAlto.cloro': 'El Ácido Cianúrico está alto en esta lectura — esto "bloquea" parte del cloro libre (chlorine lock). Para compensar, considere mantener el Cloro Libre en la parte alta del rango (cerca de 3 ppm) en lugar de en el medio; confirme con un técnico responsable si esto es suficiente para su caso.',
+    'avisoTemperaturaAlta.cloro': 'La temperatura del agua está por encima del rango ideal en esta lectura — el agua más caliente favorece las reacciones químicas y el crecimiento de microorganismos, aumentando el consumo de cloro. Para compensar, considere mantener el Cloro Libre en la parte alta del rango (cerca de 3 ppm) en lugar de en el medio, y vuelva a medir con más frecuencia.',
 
     'causa.temperatura.alto': 'Calentamiento excesivo, exposición solar directa prolongada, o clima muy caluroso.',
     'causa.temperatura.baixo': 'Clima frío, ausencia de calentamiento, o pérdida de calor nocturna.',
