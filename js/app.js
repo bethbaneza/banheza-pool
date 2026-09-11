@@ -487,6 +487,7 @@ function renderScreenPainel() {
 
   return `
     <div class="screen-header"><div><div class="kicker">${esc(t('painel.kicker'))}</div><h2>${esc(t('painel.titulo'))}</h2></div></div>
+    <button type="button" class="btn btn-primary" data-action="nav-go" data-tab="medir" style="min-height:48px;width:100%;font-size:15px;margin-bottom:20px"><i class="ph ph-drop"></i>${esc(t('painel.novaMedicao'))}</button>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px">
       <div class="card stat-tile"><div class="stat-tile-value">${counts.normal}</div><div class="stat-tile-label">${esc(t('painel.normal'))}</div></div>
       <div class="card stat-tile" style="box-shadow:inset 3px 0 0 rgba(var(--color-text-rgb),.35), var(--shadow-sm)"><div class="stat-tile-value">${counts.pendente}</div><div class="stat-tile-label">${esc(t('painel.pendente'))}</div></div>
@@ -522,13 +523,6 @@ function renderScreenPainel() {
             <button type="button" class="btn btn-ghost" data-action="ver-medicao-painel" data-id="${h.id}" data-poolid="${h.piscinaId}" style="font-size:12.5px">${esc(t('painel.ver'))}</button>
           </div>`;
       }).join('') : `<p class="empty-note">${esc(t('painel.nenhumaMedicaoAinda'))}</p>`}
-    </div>
-
-    <div class="divider-label"><span>${esc(t('painel.acoesRapidas'))}</span><span class="rule"></span></div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap">
-      <button type="button" class="btn btn-primary" data-action="nav-go" data-tab="medir" style="min-height:44px"><i class="ph ph-drop"></i>${esc(t('painel.novaMedicao'))}</button>
-      <button type="button" class="btn btn-secondary" data-action="nav-go" data-tab="historico" style="min-height:44px"><i class="ph ph-clock-counter-clockwise"></i>${esc(t('painel.verHistorico'))}</button>
-      <button type="button" class="btn btn-secondary" data-action="nav-go" data-tab="custos" style="min-height:44px"><i class="ph ph-chart-bar"></i>${esc(t('painel.verCustos'))}</button>
     </div>`;
 }
 
