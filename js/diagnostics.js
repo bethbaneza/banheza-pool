@@ -214,6 +214,17 @@ function diagnosticar(leituras, volumeLitros, produtosPorParametro, opcoes = {})
   const passos = [];
   let cianuricoAlto = false; // setado ao processar 'cianurico', usado depois ao chegar em 'cloro'
 
+  // Água quente favorece reações químicas e crescimento de microrganismos, aumentando a
+  // demanda de cloro (mesmo raciocínio do CDC sobre depleção mais rápida de cloro em spas
+  // aquecidos) — por isso empurra a meta de Cloro pro topo da faixa, igual ao Cianúrico alto,
+  // logo abaixo. Calculado aqui fora do loop porque 'temperatura' vem DEPOIS de 'cloro' na
+  // ordem fixa de prioridade (Módulo 6) — o loop ainda não teria processado essa leitura a
+  // tempo se dependesse da mesma técnica usada pro cianuricoAlto (setar uma flag ao "passar"
+  // pelo parâmetro antes de chegar em cloro).
+  const paramTemperatura = PARAMETROS.find((p) => p.id === 'temperatura');
+  const faixaTemperatura = faixasCustom.temperatura || paramTemperatura.faixa;
+  const temperaturaAlta = typeof leituras.temperatura === 'number' && leituras.temperatura > faixaTemperatura.max;
+
   for (const parametro of PARAMETROS) {
     if (parametro.apenasSistema && parametro.apenasSistema !== sistemaDesinfeccao) continue;
 
@@ -233,6 +244,9 @@ function diagnosticar(leituras, volumeLitros, produtosPorParametro, opcoes = {})
     if (parametro.id === 'cloro' && sistemaDesinfeccao === 'ozonio') avisos.push(parametro.avisoOzonio);
     if (parametro.id === 'cloro' && cianuricoAlto) {
       avisos.push('avisoCianuricoAlto.cloro');
+    }
+    if (parametro.id === 'cloro' && temperaturaAlta) {
+      avisos.push('avisoTemperaturaAlta.cloro');
     }
 
     if (status === 'adequado') {
@@ -256,10 +270,12 @@ function diagnosticar(leituras, volumeLitros, produtosPorParametro, opcoes = {})
       continue;
     }
 
-    // Cianúrico alto empurra a meta de cloro para o topo da faixa (ver Módulo 5, "Interação
-    // com outros parâmetros"), a menos que quem chamou já tenha passado uma meta explícita.
-    const metaAjustadaPorCya = parametro.id === 'cloro' && cianuricoAlto && metasCustom[parametro.id] == null;
-    const meta = metaAjustadaPorCya ? parametro.faixa.max : metasCustom[parametro.id] ?? parametro.metaPadrao;
+    // Cianúrico alto ou temperatura alta empurram a meta de cloro para o topo da faixa (ver
+    // Módulo 5, "Interação com outros parâmetros", e o comentário sobre temperaturaAlta acima),
+    // a menos que quem chamou já tenha passado uma meta explícita. As duas causas juntas ainda
+    // resultam só no topo da faixa (não "somam" além do limite seguro).
+    const metaAjustadaCloro = parametro.id === 'cloro' && (cianuricoAlto || temperaturaAlta) && metasCustom[parametro.id] == null;
+    const meta = metaAjustadaCloro ? parametro.faixa.max : metasCustom[parametro.id] ?? parametro.metaPadrao;
     const variacao = meta - valor;
     const direcao = variacao > 0 ? 'subir' : 'descer';
 

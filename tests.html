@@ -289,6 +289,38 @@
       assert(typeof passoTemp.instrucaoOperacional === 'string' && passoTemp.instrucaoOperacional.length > 0);
     });
 
+    teste('diagnosticar: Temperatura alta (acima de 30°C) empurra a meta de Cloro para o topo da faixa e avisa', () => {
+      const produtoCloro = { id: 'prod-cloro-4', nomeComercial: 'Cloro Teste 4', concentracao: 65, estadoFisico: 'solido' };
+      const passos = diagnosticar({ temperatura: 32, cloro: 0.3 }, 50000, { cloro: { subir: produtoCloro } });
+      const passoTemp = passos.find((p) => p.parametroId === 'temperatura');
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(passoTemp.status === 'alto', 'esperava temperatura alta (32°C)');
+      assert(passoCloro.status === 'baixo', 'cloro 0,3 está baixo pela faixa padrão (0,5–3)');
+      assert(aproxIgual(passoCloro.meta, 3), `esperava meta ajustada pro topo da faixa (3), veio ${passoCloro.meta}`);
+      assert(passoCloro.avisos && passoCloro.avisos.includes('avisoTemperaturaAlta.cloro'), 'esperava a chave de aviso de temperatura alta no passo de cloro');
+    });
+
+    teste('diagnosticar: Temperatura dentro da faixa ideal não altera a meta de Cloro', () => {
+      const passos = diagnosticar({ temperatura: 28, cloro: 0.2 }, 50000, {});
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(aproxIgual(passoCloro.meta, 1.5), `esperava meta padrão 1.5, veio ${passoCloro.meta}`);
+      assert(!passoCloro.avisos, 'não deveria haver aviso de temperatura alta com 28°C (dentro da faixa)');
+    });
+
+    teste('diagnosticar: Cianúrico alto e Temperatura alta juntos não passam do topo da faixa, com os dois avisos', () => {
+      const produtoCloro = { id: 'prod-cloro-5', nomeComercial: 'Cloro Teste 5', concentracao: 65, estadoFisico: 'solido' };
+      const passos = diagnosticar({ cianurico: 80, temperatura: 33, cloro: 0.3 }, 50000, { cloro: { subir: produtoCloro } });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(aproxIgual(passoCloro.meta, 3), `esperava meta ainda no topo da faixa (3), veio ${passoCloro.meta}`);
+      assert(passoCloro.avisos.includes('avisoCianuricoAlto.cloro') && passoCloro.avisos.includes('avisoTemperaturaAlta.cloro'), 'esperava os dois avisos (cianúrico e temperatura) no passo de cloro');
+    });
+
+    teste('diagnosticar: meta customizada de Cloro prevalece mesmo com Temperatura alta', () => {
+      const passos = diagnosticar({ temperatura: 32, cloro: 0.3 }, 50000, {}, { metasCustom: { cloro: 2 } });
+      const passoCloro = passos.find((p) => p.parametroId === 'cloro');
+      assert(aproxIgual(passoCloro.meta, 2), `esperava a meta customizada (2), veio ${passoCloro.meta}`);
+    });
+
     // ---------- chart.js ----------
     teste('escalaAgradavel arredonda o teto para um número redondo acima do máximo', () => {
       const r = escalaAgradavel(62);
