@@ -17,10 +17,14 @@ const TIPOS_POR_DIRECAO = {
 // checar_limite_clientes/checar_limite_piscinas em supabase/schema.sql), isto aqui só
 // espelha os mesmos números pra dar feedback imediato na interface (sem esperar o
 // servidor recusar). clientes/piscinasPorCliente null = sem limite.
+// links: checkout de assinatura recorrente criado no painel do Mercado Pago (Planos de
+// Assinatura) — o próprio Mercado Pago cobra as renovações depois do primeiro pagamento.
+// Ainda falta o webhook que lê a confirmação de pagamento e atualiza perfis.plano; até lá,
+// o clique leva pro checkout normalmente, mas o plano não muda sozinho no app.
 const PLANOS = [
-  { id: 'gratis', nome: 'plano.gratis.nome', preco: 0, clientes: 1, piscinasPorCliente: 1 },
-  { id: 'basico', nome: 'plano.basico.nome', preco: 19.9, clientes: 5, piscinasPorCliente: 1 },
-  { id: 'ilimitado', nome: 'plano.ilimitado.nome', preco: 49.9, clientes: null, piscinasPorCliente: null },
+  { id: 'gratis', nome: 'plano.gratis.nome', preco: 0, clientes: 1, piscinasPorCliente: 1, link: null },
+  { id: 'basico', nome: 'plano.basico.nome', preco: 19.9, clientes: 5, piscinasPorCliente: 1, link: 'https://mpago.la/1ZnhnAc' },
+  { id: 'ilimitado', nome: 'plano.ilimitado.nome', preco: 49.9, clientes: null, piscinasPorCliente: null, link: 'https://mpago.la/1t4vUw3' },
 ];
 function planoInfo(id) { return PLANOS.find((p) => p.id === id) || PLANOS[0]; }
 function planoAtualId() { return (state.perfil && state.perfil.plano) || 'gratis'; }
@@ -1539,10 +1543,15 @@ const actions = {
     state.formPerfil = formPerfilVazio(state.perfil);
     toast(t('perfilForm.salvo'));
   },
-  // A cobrança de verdade (Mercado Pago) ainda não está ligada — este botão só existe pra
-  // deixar claro que o plano existe e é clicável; quando a integração estiver pronta, troca
-  // por uma chamada que abre o checkout de assinatura.
-  'assinar-plano': () => { toast(t('planos.emBreve')); },
+  // Leva pro checkout de assinatura recorrente do Mercado Pago (link criado no painel deles,
+  // ver PLANOS). O Mercado Pago redireciona de volta pro app depois do pagamento, mas quem
+  // efetivamente muda o plano em perfis.plano é o webhook — ainda não construído — então o
+  // plano não atualiza sozinho na hora, só depois que essa peça existir.
+  'assinar-plano': (el) => {
+    const plano = planoInfo(el.dataset.plano);
+    if (!plano.link) { toast(t('planos.emBreve')); return; }
+    window.location.href = plano.link;
+  },
 
   // clientes
   'ir-cadastro-cliente': () => {
