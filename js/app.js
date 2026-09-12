@@ -13,6 +13,59 @@ const TIPOS_POR_DIRECAO = {
   cloro: { subir: ['Clorante granulado', 'Clorante em pastilha', 'Clorante líquido'], descer: [] },
 };
 
+// Planos de assinatura — os limites reais são aplicados no banco também (ver
+// checar_limite_clientes/checar_limite_piscinas em supabase/schema.sql), isto aqui só
+// espelha os mesmos números pra dar feedback imediato na interface (sem esperar o
+// servidor recusar). clientes/piscinasPorCliente null = sem limite.
+const PLANOS = [
+  { id: 'gratis', nome: 'plano.gratis.nome', preco: 0, clientes: 1, piscinasPorCliente: 1 },
+  { id: 'basico', nome: 'plano.basico.nome', preco: 19.9, clientes: 5, piscinasPorCliente: 1 },
+  { id: 'ilimitado', nome: 'plano.ilimitado.nome', preco: 49.9, clientes: null, piscinasPorCliente: null },
+];
+function planoInfo(id) { return PLANOS.find((p) => p.id === id) || PLANOS[0]; }
+function planoAtualId() { return (state.perfil && state.perfil.plano) || 'gratis'; }
+function limiteClientesAtingido() {
+  const lim = planoInfo(planoAtualId()).clientes;
+  return lim != null && state.clientes.length >= lim;
+}
+function limitePiscinasAtingido(clienteId) {
+  const lim = planoInfo(planoAtualId()).piscinasPorCliente;
+  if (lim == null) return false;
+  return piscinasDoCliente(clienteId).length >= lim;
+}
+
+// Validação real dos dígitos verificadores (não só o tamanho) — os dados aqui alimentam uma
+// nota fiscal emitida por fora do app, então vale a pena barrar CPF/CNPJ obviamente inválidos
+// (todos os dígitos iguais, dígito verificador errado) antes de salvar.
+function cpfValido(valor) {
+  const s = String(valor).replace(/\D/g, '');
+  if (s.length !== 11 || /^(\d)\1{10}$/.test(s)) return false;
+  const calc = (len) => {
+    let soma = 0;
+    for (let i = 0; i < len; i++) soma += Number(s[i]) * (len + 1 - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return calc(9) === Number(s[9]) && calc(10) === Number(s[10]);
+}
+function cnpjValido(valor) {
+  const s = String(valor).replace(/\D/g, '');
+  if (s.length !== 14 || /^(\d)\1{13}$/.test(s)) return false;
+  const calc = (base) => {
+    const pesos = base.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let soma = 0;
+    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * pesos[i];
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+  const d1 = calc(s.slice(0, 12));
+  const d2 = calc(s.slice(0, 12) + d1);
+  return Number(s[12]) === d1 && Number(s[13]) === d2;
+}
+function cpfCnpjValido(valor, tipoPessoa) { return tipoPessoa === 'juridica' ? cnpjValido(valor) : cpfValido(valor); }
+
+const ESTADOS_BR = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
+
 // Valores são chaves de tradução (js/i18n.js), não o texto final — ver nota em diagnostics.js.
 const SEM_PRODUTO_TEXTO = {
   alcalinidade: 'semProduto.alcalinidade',
@@ -33,7 +86,14 @@ function nf(n, casas) { return Number(n).toLocaleString(numLocale(), { minimumFr
 function numFmt(n) { return Number(n).toLocaleString(numLocale(), { maximumFractionDigits: 2 }); }
 function pctFmt(n) { return Number(n).toLocaleString(numLocale(), { maximumFractionDigits: 1 }) + '%'; }
 function dose3Fmt(n) { return nf(n, 3); }
-function moeda(n) { return Number(n).toLocaleString(numLocale(), { style: 'currency', currency: 'BRL' }); }
+// "R$" fixo na frente (nunca o formato de moeda nativo do Intl): o preço é sempre em Reais
+// para o piscineiro brasileiro, independente do idioma da interface, mas o símbolo que o
+// Intl escolhe pra BRL muda por localidade — pt-BR e en-US mostram "R$", es-ES cai pro
+// código ISO "BRL" por falta desse mapeamento nos dados de localidade. Fixando o símbolo e
+// deixando só o separador decimal variar por idioma, evita esse fallback feio.
+function moeda(n) {
+  return 'R$ ' + Number(n).toLocaleString(numLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function dataHoraFmt(iso) {
   return new Date(iso).toLocaleString(numLocale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -154,6 +214,7 @@ function estadoInicial() {
 
     clientes: [], piscinas: [], produtos: [], historico: [], consumos: [],
     carregandoDados: false, erroCarregar: '',
+    perfil: null, formPerfil: null,
 
     tab: 'painel', screen: null, clienteAtualId: null,
     formCliente: null, formPiscina: null,
@@ -196,6 +257,22 @@ function formClienteVazio(cliente) {
   return {
     id: cliente.id, nome: cliente.nome, telefone: cliente.telefone || '',
     email: cliente.email || '', endereco: cliente.endereco || '', observacoes: cliente.observacoes || '',
+  };
+}
+
+function formPerfilVazio(perfil) {
+  return {
+    tipoPessoa: (perfil && perfil.tipoPessoa) || 'fisica',
+    nomeRazaoSocial: (perfil && perfil.nomeRazaoSocial) || '',
+    cpfCnpj: (perfil && perfil.cpfCnpj) || '',
+    telefone: (perfil && perfil.telefone) || '',
+    cep: (perfil && perfil.cep) || '',
+    endereco: (perfil && perfil.endereco) || '',
+    numero: (perfil && perfil.numero) || '',
+    complemento: (perfil && perfil.complemento) || '',
+    bairro: (perfil && perfil.bairro) || '',
+    cidade: (perfil && perfil.cidade) || '',
+    estado: (perfil && perfil.estado) || '',
   };
 }
 
@@ -338,13 +415,17 @@ function podeOferecerNotificacoes() {
   return typeof Notification !== 'undefined' && Notification.permission !== 'denied';
 }
 
-function renderPrefsButtons() {
+function renderPrefsButtons(mostrarConta = true) {
+  const contaBtn = mostrarConta
+    ? `<button type="button" class="btn btn-secondary btn-icon" data-action="ir-conta" title="${esc(t('nav.conta'))}" style="width:36px;height:36px"><i class="ph ph-user"></i></button>`
+    : '';
   const notifBtn = podeOferecerNotificacoes()
     ? `<button type="button" class="btn btn-secondary btn-icon" data-action="pedir-notificacoes" title="${esc(t(Notification.permission === 'granted' ? 'nav.notif.ativado' : 'nav.notif.ativar'))}" style="width:36px;height:36px">
         <i class="ph ${Notification.permission === 'granted' ? 'ph-bell-ringing' : 'ph-bell'}"></i>
       </button>`
     : '';
   return `
+    ${contaBtn}
     ${notifBtn}
     <button type="button" class="btn btn-secondary btn-icon" data-action="alternar-tema" title="${esc(t(tema === 'dark' ? 'nav.tema.paraClaro' : 'nav.tema.paraEscuro'))}" style="width:36px;height:36px">
       <i class="ph ${tema === 'dark' ? 'ph-sun' : 'ph-moon'}"></i>
@@ -381,7 +462,7 @@ function renderAuthScreen() {
   const modo = state.authMode;
   return `
     <section class="auth-screen">
-      <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px">${renderPrefsButtons()}</div>
+      <div style="position:absolute;top:14px;right:14px;display:flex;gap:6px">${renderPrefsButtons(false)}</div>
       <div class="auth-card">
         <div class="auth-brand">${renderBrandLockup()}</div>
         <div class="auth-tabs">
@@ -415,6 +496,10 @@ function renderPainelPoolRow(pool, status) {
     : status.nivel === 'atencao'
     ? 'border:1px solid var(--color-warm);color:var(--color-warm)'
     : 'border:1px solid rgba(var(--color-text-rgb),.35);color:rgba(var(--color-text-rgb),.65)';
+  // Mesma cor da tag, só que como acento (borda + ícone) — dá pra bater o olho na lista
+  // inteira e já perceber a gravidade de cada linha, sem precisar ler a tag de cada uma.
+  const corNivel = status.nivel === 'critico' ? 'var(--warn-400)' : status.nivel === 'atencao' ? 'var(--color-warm)' : 'rgba(var(--color-text-rgb),.35)';
+  const iconeNivel = status.nivel === 'critico' ? 'ph-warning-octagon' : status.nivel === 'atencao' ? 'ph-warning' : 'ph-clock';
   const detalhes = [];
   if (!status.semMedicao) {
     if (status.foraCount > 0) detalhes.push(t('historico.foraDaFaixa', { n: status.foraCount }));
@@ -425,10 +510,10 @@ function renderPainelPoolRow(pool, status) {
   }
   if (!status.visitaVencida && status.diasVisita != null) detalhes.push(t('painel.proximaVisitaEm', { data: dataFmt(pool.proximaVisita) }));
   return `
-    <div class="card painel-row">
+    <div class="card painel-row" style="box-shadow:inset 3px 0 0 ${corNivel}, var(--shadow-sm)">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div>
-          <div style="font-weight:500;font-size:14.5px">${esc(label)}</div>
+          <div style="font-weight:500;font-size:14.5px;display:flex;align-items:center;gap:6px"><i class="ph ${iconeNivel}" style="color:${corNivel};font-size:14px"></i>${esc(label)}</div>
           ${detalhes.length ? `<div style="font-size:11.5px;color:rgba(var(--color-text-rgb),.55);margin-top:3px">${esc(detalhes.join(' · '))}</div>` : ''}
         </div>
         <span class="tag" style="${tagStyle};flex:none">${esc(tagLabel)}</span>
@@ -461,6 +546,9 @@ function alertasInformativos() {
   if (proximas > 0) {
     alertas.push({ texto: t('painel.lembreteVisitasProximas', { n: proximas }), acao: 'nav-go', tab: 'clientes' });
   }
+  if (state.perfil && !state.perfil.cpfCnpj) {
+    alertas.push({ texto: t('painel.completeCadastro'), acao: 'ir-conta' });
+  }
   return alertas;
 }
 
@@ -489,10 +577,10 @@ function renderScreenPainel() {
     <div class="screen-header"><div><div class="kicker">${esc(t('painel.kicker'))}</div><h2>${esc(t('painel.titulo'))}</h2></div></div>
     <button type="button" class="btn btn-primary" data-action="nav-go" data-tab="medir" style="min-height:48px;width:100%;font-size:15px;margin-bottom:20px"><i class="ph ph-drop"></i>${esc(t('painel.novaMedicao'))}</button>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px">
-      <div class="card stat-tile"><div class="stat-tile-value">${counts.normal}</div><div class="stat-tile-label">${esc(t('painel.normal'))}</div></div>
-      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 rgba(var(--color-text-rgb),.35), var(--shadow-sm)"><div class="stat-tile-value">${counts.pendente}</div><div class="stat-tile-label">${esc(t('painel.pendente'))}</div></div>
-      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--color-warm), var(--shadow-sm)"><div class="stat-tile-value">${counts.atencao}</div><div class="stat-tile-label">${esc(t('painel.atencao'))}</div></div>
-      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--warn-400), var(--shadow-sm)"><div class="stat-tile-value">${counts.critico}</div><div class="stat-tile-label">${esc(t('painel.critico'))}</div></div>
+      <div class="card stat-tile"><i class="ph ph-check-circle stat-tile-icon" style="color:var(--color-accent)"></i><div class="stat-tile-value">${counts.normal}</div><div class="stat-tile-label">${esc(t('painel.normal'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 rgba(var(--color-text-rgb),.35), var(--shadow-sm)"><i class="ph ph-clock stat-tile-icon" style="color:rgba(var(--color-text-rgb),.5)"></i><div class="stat-tile-value">${counts.pendente}</div><div class="stat-tile-label">${esc(t('painel.pendente'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--color-warm), var(--shadow-sm)"><i class="ph ph-warning stat-tile-icon" style="color:var(--color-warm)"></i><div class="stat-tile-value">${counts.atencao}</div><div class="stat-tile-label">${esc(t('painel.atencao'))}</div></div>
+      <div class="card stat-tile" style="box-shadow:inset 3px 0 0 var(--warn-400), var(--shadow-sm)"><i class="ph ph-warning-octagon stat-tile-icon" style="color:var(--warn-400)"></i><div class="stat-tile-value">${counts.critico}</div><div class="stat-tile-label">${esc(t('painel.critico'))}</div></div>
     </div>
 
     ${informativos.length ? `
@@ -514,10 +602,11 @@ function renderScreenPainel() {
         const pool = piscinaPorId(h.piscinaId);
         const cliente = pool ? clientePorId(pool.clienteId) : null;
         const fora = h.passos.filter((p) => p.status !== 'adequado').length;
+        const corMedicao = fora > 0 ? 'var(--color-warm)' : 'var(--color-accent)';
         return `
           <div class="cost-row">
             <div>
-              <div class="cost-name">${esc(cliente ? cliente.nome + ' — ' : '')}${esc(pool ? pool.nome : '—')}</div>
+              <div class="cost-name" style="display:flex;align-items:center;gap:6px"><i class="ph ${fora > 0 ? 'ph-warning' : 'ph-check-circle'}" style="color:${corMedicao};font-size:14px"></i>${esc(cliente ? cliente.nome + ' — ' : '')}${esc(pool ? pool.nome : '—')}</div>
               <div class="cost-detail">${dataHoraFmt(h.data)} · ${fora > 0 ? esc(t('historico.foraDaFaixa', { n: fora })) : esc(t('historico.tudoAdequado'))}</div>
             </div>
             <button type="button" class="btn btn-ghost" data-action="ver-medicao-painel" data-id="${h.id}" data-poolid="${h.piscinaId}" style="font-size:12.5px">${esc(t('painel.ver'))}</button>
@@ -1334,6 +1423,82 @@ function renderScreenProdutos() {
     </div>`;
 }
 
+/* ── tela: minha conta (dados cadastrais + plano) ────────────────────────── */
+
+function renderScreenConta() {
+  const f = state.formPerfil || (state.formPerfil = formPerfilVazio(state.perfil));
+  const planoId = planoAtualId();
+  const usoClientes = state.clientes.length;
+
+  const planoCards = PLANOS.map((p) => {
+    const atual = p.id === planoId;
+    const limiteTxt = p.clientes == null ? t('planos.clientesIlimitados') : t('planos.clientesLimite', { n: p.clientes });
+    const piscinaTxt = p.piscinasPorCliente == null ? t('planos.piscinasIlimitadas') : t('planos.piscinasLimite', { n: p.piscinasPorCliente });
+    return `
+      <div class="card" style="display:flex;flex-direction:column;gap:10px;${atual ? 'box-shadow:inset 3px 0 0 var(--color-accent), var(--shadow-sm)' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <div style="font-weight:600;font-size:15px">${esc(t(p.nome))}</div>
+            <div style="font-size:20px;font-weight:600;margin-top:2px">${p.preco > 0 ? moeda(p.preco) + t('planos.porMes') : t('planos.gratuito')}</div>
+          </div>
+          ${atual ? `<span class="tag" style="background:var(--color-accent);color:var(--color-bg);flex:none">${esc(t('planos.planoAtual'))}</span>` : ''}
+        </div>
+        <div style="font-size:12.5px;color:rgba(var(--color-text-rgb),.65);line-height:1.6">
+          <div>${esc(limiteTxt)}</div>
+          <div>${esc(piscinaTxt)}</div>
+        </div>
+        ${!atual && p.preco > 0 ? `<button type="button" class="btn btn-primary" data-action="assinar-plano" data-plano="${p.id}" style="min-height:40px">${esc(t('planos.assinar'))}</button>` : ''}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="back-row">
+      <button type="button" class="btn btn-secondary btn-icon" data-action="fechar-conta"><i class="ph ph-arrow-left"></i></button>
+      <h4>${esc(t('conta.titulo'))}</h4>
+    </div>
+
+    <div class="divider-label"><span>${esc(t('conta.planoSecao'))}</span><span class="rule"></span></div>
+    <p class="empty-note" style="margin-bottom:14px">${esc(t('planos.usoAtual', { n: usoClientes }))}</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:26px">
+      ${planoCards}
+    </div>
+
+    <div class="divider-label"><span>${esc(t('conta.dadosSecao'))}</span><span class="rule"></span></div>
+    <p class="empty-note" style="margin:10px 0 14px">${esc(t('conta.dadosAjuda'))}</p>
+    <div class="card" style="display:flex;flex-direction:column;gap:14px;max-width:560px">
+      <div class="field"><label>${esc(t('perfilForm.tipoPessoa'))}</label>
+        <span class="seg">
+          <label class="seg-opt"><input type="radio" name="tipoPessoa" data-action="set-perfil-tipo" data-tipo="fisica" ${f.tipoPessoa === 'fisica' ? 'checked' : ''} />${esc(t('perfilForm.fisica'))}</label>
+          <label class="seg-opt"><input type="radio" name="tipoPessoa" data-action="set-perfil-tipo" data-tipo="juridica" ${f.tipoPessoa === 'juridica' ? 'checked' : ''} />${esc(t('perfilForm.juridica'))}</label>
+        </span>
+      </div>
+      <div class="field"><label>${esc(t(f.tipoPessoa === 'juridica' ? 'perfilForm.razaoSocial' : 'perfilForm.nomeCompleto'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="nomeRazaoSocial" value="${esc(f.nomeRazaoSocial)}" /></div>
+      <div class="field"><label>${esc(t(f.tipoPessoa === 'juridica' ? 'perfilForm.cnpj' : 'perfilForm.cpf'))}</label><input class="input" type="text" inputmode="numeric" placeholder="${esc(t(f.tipoPessoa === 'juridica' ? 'perfilForm.cnpjPlaceholder' : 'perfilForm.cpfPlaceholder'))}" data-action="set-perfil-campo" data-campo="cpfCnpj" value="${esc(f.cpfCnpj)}" /></div>
+      <div class="field"><label>${esc(t('perfilForm.telefone'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="telefone" value="${esc(f.telefone)}" /></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label>${esc(t('perfilForm.cep'))}</label><input class="input" type="text" inputmode="numeric" data-action="set-perfil-campo" data-campo="cep" value="${esc(f.cep)}" /></div>
+        <div class="field" style="flex:2"><label>${esc(t('perfilForm.endereco'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="endereco" value="${esc(f.endereco)}" /></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:1"><label>${esc(t('perfilForm.numero'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="numero" value="${esc(f.numero)}" /></div>
+        <div class="field" style="flex:2"><label>${esc(t('perfilForm.complemento'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="complemento" value="${esc(f.complemento)}" /></div>
+      </div>
+      <div class="field"><label>${esc(t('perfilForm.bairro'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="bairro" value="${esc(f.bairro)}" /></div>
+      <div style="display:flex;gap:10px">
+        <div class="field" style="flex:2"><label>${esc(t('perfilForm.cidade'))}</label><input class="input" type="text" data-action="set-perfil-campo" data-campo="cidade" value="${esc(f.cidade)}" /></div>
+        <div class="field" style="flex:1"><label>${esc(t('perfilForm.estado'))}</label>
+          <select class="input" data-action="set-perfil-campo" data-campo="estado">
+            <option value="">—</option>
+            ${ESTADOS_BR.map((uf) => `<option value="${uf}" ${f.estado === uf ? 'selected' : ''}>${uf}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button type="button" class="btn btn-primary" data-action="salvar-perfil" style="padding-inline:20px" ${state.ocupado ? 'disabled' : ''}>${state.ocupado ? esc(t('common.salvando')) : esc(t('perfilForm.salvar'))}</button>
+      </div>
+    </div>`;
+}
+
 /* ── ações ───────────────────────────────────────────────────────────────── */
 
 const actions = {
@@ -1361,8 +1526,29 @@ const actions = {
   'voltar-medir': () => { state.screen = null; state.tab = 'medir'; state.resultado = null; },
   'ir-produtos': () => { state.screen = 'produtos'; },
 
+  // conta (dados cadastrais do piscineiro + plano)
+  'ir-conta': () => { state.screen = 'conta'; state.formPerfil = formPerfilVazio(state.perfil); },
+  'fechar-conta': () => { state.screen = null; state.formPerfil = null; },
+  'set-perfil-tipo': (el) => { state.formPerfil.tipoPessoa = el.dataset.tipo; },
+  'set-perfil-campo': (el) => { state.formPerfil[el.dataset.campo] = el.value; },
+  'salvar-perfil': async () => {
+    const f = state.formPerfil;
+    if (!f.nomeRazaoSocial.trim()) { toast(t('perfilForm.deNome')); return; }
+    if (!cpfCnpjValido(f.cpfCnpj, f.tipoPessoa)) { toast(t(f.tipoPessoa === 'juridica' ? 'perfilForm.cnpjInvalido' : 'perfilForm.cpfInvalido')); return; }
+    state.perfil = await DB.salvarPerfil({ ...f, id: state.perfil.id });
+    state.formPerfil = formPerfilVazio(state.perfil);
+    toast(t('perfilForm.salvo'));
+  },
+  // A cobrança de verdade (Mercado Pago) ainda não está ligada — este botão só existe pra
+  // deixar claro que o plano existe e é clicável; quando a integração estiver pronta, troca
+  // por uma chamada que abre o checkout de assinatura.
+  'assinar-plano': () => { toast(t('planos.emBreve')); },
+
   // clientes
-  'ir-cadastro-cliente': () => { state.screen = 'cadastro-cliente'; state.formCliente = formClienteVazio(null); },
+  'ir-cadastro-cliente': () => {
+    if (limiteClientesAtingido()) { state.screen = 'conta'; toast(t('planos.limiteClientesToast')); return; }
+    state.screen = 'cadastro-cliente'; state.formCliente = formClienteVazio(null);
+  },
   'ir-editar-cliente': (el) => { state.screen = 'cadastro-cliente'; state.formCliente = formClienteVazio(clientePorId(el.dataset.id)); },
   'abrir-cliente': (el) => { state.screen = 'cliente-detalhe'; state.clienteAtualId = el.dataset.id; },
   'set-cliente-nome': (el) => { state.formCliente.nome = el.value; },
@@ -1393,7 +1579,10 @@ const actions = {
   },
 
   // piscinas
-  'ir-cadastro-piscina': () => { state.screen = 'cadastro-piscina'; state.formPiscina = formVazio(null); },
+  'ir-cadastro-piscina': () => {
+    if (limitePiscinasAtingido(state.clienteAtualId)) { state.screen = 'conta'; toast(t('planos.limitePiscinasToast')); return; }
+    state.screen = 'cadastro-piscina'; state.formPiscina = formVazio(null);
+  },
   'editar-piscina': (el) => {
     const pool = piscinaPorId(el.dataset.id);
     state.screen = 'cadastro-piscina'; state.clienteAtualId = pool.clienteId; state.formPiscina = formVazio(pool);
@@ -1670,6 +1859,7 @@ function renderScreenHtml() {
   if (state.screen === 'cadastro-piscina') return renderScreenCadastroPiscina();
   if (state.screen === 'resultado') return renderScreenResultado();
   if (state.screen === 'produtos') return renderScreenProdutos();
+  if (state.screen === 'conta') return renderScreenConta();
   if (state.tab === 'medir') return renderScreenMedir();
   if (state.tab === 'sal') return renderScreenSal();
   if (state.tab === 'historico') return renderScreenHistorico();
@@ -1812,6 +2002,7 @@ async function carregarDadosIniciais() {
   renderAll();
   try {
     await DB.garantirProdutosPadrao();
+    state.perfil = await DB.garantirPerfil();
     const [clientes, piscinas, produtos, historico, consumos] = await Promise.all([
       DB.listarClientes(), DB.listarPiscinas(), DB.listarProdutos(), DB.listarTodoHistorico(), DB.listarConsumos(),
     ]);

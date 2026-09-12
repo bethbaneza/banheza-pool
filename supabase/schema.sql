@@ -42,6 +42,100 @@ create table if not exists public.piscinas (
 -- Se a tabela já existir de uma versão anterior do schema, garante a coluna sem recriar nada:
 alter table public.piscinas add column if not exists proxima_visita date;
 
+-- ── perfis (dados cadastrais do piscineiro + plano de assinatura) ────────────
+-- Uma linha por usuário (id = auth.users.id, não um uuid próprio) — os dados aqui servem só
+-- pra identificação/endereço de cobrança; a emissão de nota fiscal em si acontece fora do app.
+create table if not exists public.perfis (
+  id uuid primary key references auth.users (id) on delete cascade,
+  tipo_pessoa text not null default 'fisica', -- 'fisica' | 'juridica'
+  nome_razao_social text,
+  cpf_cnpj text,
+  telefone text,
+  cep text,
+  endereco text,
+  numero text,
+  complemento text,
+  bairro text,
+  cidade text,
+  estado text,
+  plano text not null default 'gratis', -- 'gratis' | 'basico' | 'ilimitado'
+  status_assinatura text, -- null (gratis) | 'ativa' | 'atrasada' | 'cancelada'
+  mp_preapproval_id text, -- id da assinatura no Mercado Pago, quando existir
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.perfis enable row level security;
+drop policy if exists "perfis_own_row" on public.perfis;
+create policy "perfis_own_row" on public.perfis
+  for all using (auth.uid() = id) with check (auth.uid() = id);
+
+-- ── limites de plano — aplicados aqui no banco (não só na interface), pra não dar pra
+--    contornar o paywall chamando a API do Supabase direto com a anon key ───────────────
+-- Grátis: 1 cliente, 1 piscina por cliente. Básico (R$19,90): até 5 clientes, 1 piscina por
+-- cliente. Ilimitado (R$49,90): sem limite de clientes nem de piscinas.
+create or replace function public.limite_clientes_do_plano(p_plano text)
+returns integer language sql immutable as $$
+  select case p_plano
+    when 'basico' then 5
+    when 'ilimitado' then null
+    else 1 -- gratis (e qualquer plano desconhecido, por segurança)
+  end;
+$$;
+
+create or replace function public.limite_piscinas_por_cliente_do_plano(p_plano text)
+returns integer language sql immutable as $$
+  select case p_plano
+    when 'ilimitado' then null
+    else 1 -- gratis e basico
+  end;
+$$;
+
+create or replace function public.checar_limite_clientes()
+returns trigger language plpgsql as $$
+declare
+  v_limite integer;
+  v_atual integer;
+begin
+  select public.limite_clientes_do_plano(coalesce((select plano from public.perfis where id = new.user_id), 'gratis'))
+    into v_limite;
+  if v_limite is not null then
+    select count(*) into v_atual from public.clientes where user_id = new.user_id;
+    if v_atual >= v_limite then
+      raise exception 'LIMITE_CLIENTES_ATINGIDO' using errcode = 'P0001';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_checar_limite_clientes on public.clientes;
+create trigger trg_checar_limite_clientes
+  before insert on public.clientes
+  for each row execute function public.checar_limite_clientes();
+
+create or replace function public.checar_limite_piscinas()
+returns trigger language plpgsql as $$
+declare
+  v_limite integer;
+  v_atual integer;
+begin
+  select public.limite_piscinas_por_cliente_do_plano(coalesce((select plano from public.perfis where id = new.user_id), 'gratis'))
+    into v_limite;
+  if v_limite is not null then
+    select count(*) into v_atual from public.piscinas where user_id = new.user_id and cliente_id = new.cliente_id;
+    if v_atual >= v_limite then
+      raise exception 'LIMITE_PISCINAS_ATINGIDO' using errcode = 'P0001';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_checar_limite_piscinas on public.piscinas;
+create trigger trg_checar_limite_piscinas
+  before insert on public.piscinas
+  for each row execute function public.checar_limite_piscinas();
+
 -- ── produtos (catálogo próprio de cada usuário) ──────────────────────────────
 create table if not exists public.produtos (
   id uuid primary key default gen_random_uuid(),
