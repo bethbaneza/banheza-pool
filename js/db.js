@@ -31,11 +31,39 @@ function traduzErroAuth(error) {
   return msg || t('dbErro.generico');
 }
 
+// Mensagens levantadas pelos triggers de limite de plano (ver supabase/schema.sql,
+// checar_limite_clientes/checar_limite_piscinas) — chegam como texto puro do Postgres, sem
+// tradução; mapeadas aqui pro mesmo padrão de traduzErroAuth.
+function traduzErroBanco(msg) {
+  if (/LIMITE_CLIENTES_ATINGIDO/.test(msg)) return t('dbErro.limiteClientes');
+  if (/LIMITE_PISCINAS_ATINGIDO/.test(msg)) return t('dbErro.limitePiscinas');
+  return null;
+}
+
 function checar({ error }) {
-  if (error) throw new Error(error.message || t('dbErro.generico'));
+  if (!error) return;
+  throw new Error(traduzErroBanco(error.message || '') || error.message || t('dbErro.generico'));
 }
 
 /* ── conversão linha do banco <-> objeto do app ─────────────────────────────── */
+
+function rowToPerfil(r) {
+  return {
+    id: r.id, tipoPessoa: r.tipo_pessoa || 'fisica', nomeRazaoSocial: r.nome_razao_social || '',
+    cpfCnpj: r.cpf_cnpj || '', telefone: r.telefone || '',
+    cep: r.cep || '', endereco: r.endereco || '', numero: r.numero || '', complemento: r.complemento || '',
+    bairro: r.bairro || '', cidade: r.cidade || '', estado: r.estado || '',
+    plano: r.plano || 'gratis', statusAssinatura: r.status_assinatura || null,
+  };
+}
+function perfilToRow(p) {
+  return {
+    tipo_pessoa: p.tipoPessoa, nome_razao_social: p.nomeRazaoSocial || null, cpf_cnpj: p.cpfCnpj || null,
+    telefone: p.telefone || null, cep: p.cep || null, endereco: p.endereco || null, numero: p.numero || null,
+    complemento: p.complemento || null, bairro: p.bairro || null, cidade: p.cidade || null, estado: p.estado || null,
+    updated_at: new Date().toISOString(),
+  };
+}
 
 function rowToCliente(r) {
   return {
@@ -137,6 +165,26 @@ const DB = {
   },
   onAuthStateChange(cb) {
     return supabaseClient.auth.onAuthStateChange(cb);
+  },
+
+  // ---- perfil do piscineiro (dados cadastrais + plano) ----
+  // Semeia a linha de perfil (plano 'gratis') na primeira vez que a pessoa loga, mesma ideia
+  // de garantirProdutosPadrao() — sem isso os triggers de limite de plano (schema.sql) não
+  // teriam de onde ler o plano atual.
+  async garantirPerfil() {
+    const { data: sessao } = await supabaseClient.auth.getSession();
+    const uid = sessao.session.user.id;
+    const r = await supabaseClient.from('perfis').select('*').eq('id', uid).maybeSingle();
+    checar(r);
+    if (r.data) return rowToPerfil(r.data);
+    const ins = await supabaseClient.from('perfis').insert({ id: uid }).select().single();
+    checar(ins);
+    return rowToPerfil(ins.data);
+  },
+  async salvarPerfil(perfil) {
+    const r = await supabaseClient.from('perfis').update(perfilToRow(perfil)).eq('id', perfil.id).select().single();
+    checar(r);
+    return rowToPerfil(r.data);
   },
 
   // ---- clientes ----
